@@ -24,28 +24,39 @@ export class PrismaService
 
     if (typeof (this as any).$use === 'function') {
       (this as any).$use(async (params: any, next: any) => {
-        let retries = 2;
+        let retries = 3;
         while (retries >= 0) {
           try {
             return await next(params);
           } catch (error: any) {
+            const msg = error?.message || '';
             const isClosed =
-              error?.message?.includes('Closed') ||
-              error?.message?.includes('kind: Closed') ||
-              error?.message?.includes('Connection closed') ||
+              msg.includes('Closed') ||
+              msg.includes('kind: Closed') ||
+              msg.includes('Connection closed') ||
+              msg.includes('57P01') ||
+              msg.includes('terminating connection') ||
+              msg.includes('administrator command') ||
+              msg.includes('server closed the connection unexpectedly') ||
+              msg.includes('Connection reset by peer') ||
               error?.code === 'P1001' ||
-              error?.code === 'P1017';
+              error?.code === 'P1017' ||
+              error?.code === 'P2024';
 
             if (isClosed && retries > 0) {
               this.logger.warn(
-                `Prisma connection closed/dropped ("${error.message}"). Reconnecting Prisma... (${retries} retries left)`,
+                `Prisma PostgreSQL connection interrupted ("${msg}"). Re-establishing connection for Neon Serverless... (${retries} retries left)`,
               );
               retries--;
               try {
                 await this.$disconnect();
-              } catch { }
-              await new Promise((res) => setTimeout(res, 500));
-              await this.$connect();
+              } catch {}
+              await new Promise((res) => setTimeout(res, 1000));
+              try {
+                await this.$connect();
+              } catch (connErr: any) {
+                this.logger.warn(`Reconnect attempt error: ${connErr?.message}`);
+              }
               continue;
             }
             throw error;
