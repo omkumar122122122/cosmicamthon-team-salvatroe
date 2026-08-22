@@ -41,7 +41,7 @@ uploads/
 backend/uploads/
 ai_microservice/enrollment_images/
 ai_microservice/test_*
-ai
+/ai
 
 # Editor & IDE directories
 **/.vscode/
