@@ -54,3 +54,14 @@ ai
 # OS generated files
 **/.DS_Store
 **/Thumbs.db
+
+# Temporary scratch and rewrite scripts
+rewrite*.py
+_*.txt
+*.log
+fix_*.cjs
+git_status.txt
+c
+scr
+first
+scratch/
