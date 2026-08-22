@@ -1,0 +1,26 @@
+-- Summary of children records and photo storage
+SELECT 
+  COUNT(*) as total_children,
+  COUNT(CASE WHEN photo IS NOT NULL AND photo != '' THEN 1 END) as children_with_photo,
+  COUNT(CASE WHEN photo IS NULL OR photo = '' THEN 1 END) as children_without_photo,
+  COUNT(CASE WHEN "deletedAt" IS NULL THEN 1 END) as active_children,
+  COUNT(CASE WHEN "deletedAt" IS NOT NULL THEN 1 END) as deleted_children
+FROM children;
+
+-- Check children with their orphanage names
+SELECT 
+  c.id,
+  c."childCode",
+  c."firstName",
+  c."lastName",
+  o.name as orphanage_name,
+  CASE WHEN c.photo IS NOT NULL AND c.photo != '' THEN 'YES' ELSE 'NO' END as has_photo,
+  LENGTH(c.photo) as photo_size,
+  c."currentStatus",
+  c."healthStatus",
+  c."createdAt",
+  c."updatedAt"
+FROM children c
+LEFT JOIN orphanages o ON c."orphanageId" = o.id
+WHERE c."deletedAt" IS NULL
+ORDER BY c."createdAt" DESC;
