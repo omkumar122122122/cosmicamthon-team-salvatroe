@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+/.pnpm-store
+
+# Production & Build
+dist/
+build/
+
+# Environment
+.env
+.env.*
+
+# Database
+prisma/*.db
+prisma/*.db-journal
+
+# Logs
+*.log
+npm-debug.log*
+
+# Uploads
+uploads/
