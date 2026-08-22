@@ -1,0 +1,2071 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                           String               @id @default(uuid())
+  email                        String               @unique
+  phone                        String?              @unique
+  password                     String?
+  provider                     AuthProvider         @default(LOCAL)
+  providerUserId               String?
+  firstName                    String
+  lastName                     String
+  avatar                       String?
+  role                         Role                 @default(GUEST)
+  isActive                     Boolean              @default(true)
+  isEmailVerified              Boolean              @default(false)
+  isPhoneVerified              Boolean              @default(false)
+  isTwoFactorEnabled           Boolean              @default(false)
+  twoFactorSecret              String?
+  emailVerificationToken       String?              @unique
+  emailVerificationTokenExpiry DateTime?
+  passwordResetToken           String?              @unique
+  passwordResetTokenExpiry     DateTime?
+  loginAttempts                Int                  @default(0)
+  lockedUntil                  DateTime?
+  lastLoginAt                  DateTime?
+  lastLoginIp                  String?
+  passwordChangedAt            DateTime?
+  createdAt                    DateTime             @default(now())
+  updatedAt                    DateTime             @updatedAt
+  deletedAt                    DateTime?
+  reviewedAdoptions            AdoptionRecord[]     @relation("AdoptionReviewedBy")
+  computedRiskScores           AIRiskScore[]        @relation("RiskScoreComputedBy")
+  aiSessionsUser               AISession[]          @relation("AISessionUser")
+  createdAlerts                Alert[]              @relation("AlertCreatedBy")
+  resolvedAlerts               Alert[]              @relation("AlertResolvedBy")
+  markedAttendance             AttendanceRecord[]   @relation("AttendanceMarkedBy")
+  verifiedAttendance           AttendanceRecord[]   @relation("AttendanceVerifiedBy")
+  auditLogs                    AuditLog[]           @relation("UserAuditLogs")
+  capturedBiometrics           BiometricData[]      @relation("BiometricCapturedBy")
+  uploadedChildDocs            ChildDocument[]      @relation("ChildDocumentUploadedBy")
+  verifiedChildDocs            ChildDocument[]      @relation("ChildDocumentVerifiedBy")
+  confirmedRelationships       ChildRelationship[]  @relation("RelationshipConfirmedBy")
+  caseworkerChildren           Child[]              @relation("AssignedCaseworker")
+  assignedChildren             Child[]              @relation("AssignedSocialWorker")
+  recordedEducation            EducationRecord[]    @relation("EducationRecordedBy")
+  recordedGuardians            GuardianHistory[]    @relation("GuardianRecordedBy")
+  recordedHealthReps           HealthReport[]       @relation("HealthReportRecordedBy")
+  recordedMedHistory           MedicalHistory[]     @relation("MedHistoryRecordedBy")
+  notifications                Notification[]
+  orphanageStaff               OrphanageStaff[]
+  otpTokens                    OtpToken[]
+  reviewedDocuments            ParentDocument[]     @relation("DocumentReviewedBy")
+  reviewedKycSubmissions       KycSubmission[]      @relation("KycSubmissionReviewedBy")
+  parentProfile                Parent?
+  verifiedParents              Parent[]             @relation("VerifiedBy")
+  initiatedPoliceVer           PoliceVerification[] @relation("PoliceVerInitiatedBy")
+  reviewedPoliceVer            PoliceVerification[] @relation("PoliceVerReviewedBy")
+  refreshTokens                RefreshToken[]
+  reportRequests               ReportExport[]       @relation("ReportRequestedBy")
+  socialWorkerProfile          SocialWorkerProfile?
+  orphanageProfile            Orphanage?           @relation("OrphanageUser")
+  systemSettings               SystemSetting[]      @relation("SettingUpdatedBy")
+  performedTrustLogs           TrustScoreLog[]      @relation("TrustScorePerformedBy")
+  reviewedVisitRequests        VisitRequest[]       @relation("VisitRequestReviewedBy")
+  supervisedVisits             VisitRequest[]       @relation("VisitRequestSupervisor")
+  conductedSessions            WelfareSession[]     @relation("SessionConductedBy")
+  startedSessions              AttendanceSession[]       @relation("SessionStartedBy")
+  reviewedManualVerifications   ManualVerificationQueue[] @relation("ManualVerificationReviewer")
+  resolvedUnknownFaces         UnknownFaceEvent[]        @relation("UnknownFaceResolver")
+  donorProfile                 Donor?
+
+  @@index([role])
+  @@index([isActive])
+  @@index([deletedAt])
+  @@index([email, deletedAt])
+  @@index([email, isActive])
+  @@index([emailVerificationToken])
+  @@index([passwordResetToken])
+  @@index([loginAttempts])
+  @@index([lockedUntil])
+  @@map("users")
+}
+
+model RefreshToken {
+  id            String    @id @default(uuid())
+  token         String    @unique
+  jti           String    @unique
+  userId        String
+  userAgent     String?
+  ipAddress     String?
+  deviceId      String?
+  isRevoked     Boolean   @default(false)
+  revokedAt     DateTime?
+  revokedReason String?
+  expiresAt     DateTime
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isRevoked])
+  @@index([isRevoked])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+model OtpToken {
+  id           String     @id @default(uuid())
+  code         String
+  purpose      OtpPurpose
+  userId       String
+  deliveredTo  String
+  deliveryType String     @default("email")
+  attempts     Int        @default(0)
+  maxAttempts  Int        @default(5)
+  isUsed       Boolean    @default(false)
+  usedAt       DateTime?
+  expiresAt    DateTime
+  createdAt    DateTime   @default(now())
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([purpose])
+  @@index([isUsed])
+  @@index([expiresAt])
+  @@index([userId, purpose])
+  @@index([userId, purpose, isUsed])
+  @@map("otp_tokens")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  action     String
+  resource   String?
+  resourceId String?
+  details    Json?
+  ipAddress  String?
+  userAgent  String?
+  success    Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  user       User?    @relation("UserAuditLogs", fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@index([resourceId])
+  @@index([success])
+  @@index([userId, createdAt])
+  @@map("audit_logs")
+}
+
+model Orphanage {
+  id                           String             @id @default(uuid())
+  code                         String             @unique
+  name                         String
+  organizationType             OrganizationType
+  status                       OrphanageStatus    @default(ACTIVE)
+  registrationNumber           String             @unique
+  governmentLicenseNumber      String?            @unique
+  establishmentDate            DateTime?
+  officialEmail                String             @unique
+  phone                        String
+  alternativePhone             String?
+  website                      String?
+  addressLine1                 String
+  addressLine2                 String?
+  landmark                     String?
+  city                         String
+  district                     String?
+  state                        String
+  pincode                      String
+  country                      String             @default("India")
+  latitude                     Float?
+  longitude                    Float?
+  totalCapacity                Int                @default(0)
+  currentOccupancy             Int                @default(0)
+  faceRecognitionEnabled       Boolean            @default(false)
+  cctvInstalled                Boolean            @default(false)
+  numberOfCameras              Int                @default(0)
+  gpsTrackingAvailable         Boolean            @default(false)
+  emergencyAlertEnabled        Boolean            @default(false)
+  biometricAttendanceEnabled   Boolean            @default(false)
+  bankName                     String?
+  bankAccountNumber            String?
+  bankIfscCode                 String?
+  bankAccountHolder            String?
+  complianceScore              Int                @default(0)
+  lastInspectionDate           DateTime?
+  nextInspectionDue            DateTime?
+  isActive                     Boolean            @default(true)
+  isVerified                   Boolean            @default(false)
+  isFeatured                   Boolean            @default(false)
+  gstNumber                    String?
+  panNumber                    String?
+  emergencyContactPerson       String?
+  emergencyContactMobile       String?
+  emergencyContactEmail        String?
+  emergencyContactRelationship String?
+  facilities                   Json?
+  createdAt                    DateTime           @default(now())
+  updatedAt                    DateTime           @updatedAt
+  deletedAt                    DateTime?
+  userId                       String?            @unique
+  user                         User?              @relation("OrphanageUser", fields: [userId], references: [id], onDelete: SetNull)
+  alerts                       Alert[]            @relation("OrphanageAlerts")
+  children                     Child[]
+  licenses                     OrphanageLicense[]
+  staff                        OrphanageStaff[]
+  visitRequests                VisitRequest[]
+  attendanceSessions           AttendanceSession[]
+  manualVerifications          ManualVerificationQueue[]
+  unknownFaceEvents            UnknownFaceEvent[]
+  attendanceSummaries          AttendanceSummary[]
+
+  @@index([status])
+  @@index([state])
+  @@index([city])
+  @@index([isActive])
+  @@index([isVerified])
+  @@map("orphanages")
+}
+
+model OrphanageStaff {
+  id          String             @id @default(uuid())
+  staffType   StaffType          @default(ORPHANAGE)
+  orphanageId String?
+  userId      String
+  role        OrphanageStaffRole @default(OTHER)
+  designation String?
+  employeeId  String?
+  joiningDate DateTime?
+  endDate     DateTime?
+  isActive    Boolean            @default(true)
+  notes       String?
+  createdBy   String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  orphanage   Orphanage?         @relation(fields: [orphanageId], references: [id], onDelete: Cascade)
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([orphanageId])
+  @@index([userId])
+  @@index([staffType])
+  @@index([isActive])
+  @@map("orphanage_staff")
+}
+
+model OrphanageLicense {
+  id               String        @id @default(uuid())
+  orphanageId      String
+  licenseType      LicenseType
+  licenseNumber    String
+  issuingAuthority String
+  status           LicenseStatus @default(PENDING)
+  issuedDate       DateTime?
+  expiryDate       DateTime?
+  renewedDate      DateTime?
+  documentUrl      String?
+  storagePath      String?
+  notes            String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  orphanage        Orphanage     @relation(fields: [orphanageId], references: [id], onDelete: Cascade)
+
+  @@unique([orphanageId, licenseType])
+  @@index([orphanageId])
+  @@index([status])
+  @@index([expiryDate])
+  @@map("orphanage_licenses")
+}
+
+model Parent {
+  id                       String                   @id @default(uuid())
+  userId                   String                   @unique
+  dateOfBirth              DateTime?
+  gender                   Gender?
+  nationality              String                   @default("Indian")
+  religion                 String?
+  maritalStatus            MaritalStatus?
+  spouseName               String?
+  spouseDateOfBirth        DateTime?
+  spouseOccupation         String?
+  alternatePhone           String?
+  emergencyContact         String?
+  emergencyContactName     String?
+  emergencyContactRelation String?
+  occupation               String?
+  employmentType           EmploymentType?
+  employerName             String?
+  employerAddress          String?
+  workPhone                String?
+  yearsOfExperience        Int?
+  annualIncome             Float?
+  incomeRange              IncomeRange?
+  incomeVerified           Boolean                  @default(false)
+  houseOwnership           HouseOwnership?
+  numberOfRooms            Int?
+  hasChildRoom             Boolean                  @default(false)
+  hasChronicIllness        Boolean                  @default(false)
+  chronicIllnessDetails    String?
+  hasDisability            Boolean                  @default(false)
+  disabilityDetails        String?
+  hasHealthInsurance       Boolean                  @default(false)
+  preferredChildAge        String?
+  preferredGender          GenderPreference?
+  preferredCount           Int                      @default(1)
+  openToSpecialNeeds       Boolean                  @default(false)
+  specialNeedsDetails      String?
+  adoptionMotivation       String?
+  verificationStatus       ParentVerificationStatus @default(PENDING)
+  verificationNotes        String?
+  verifiedById             String?
+  verifiedAt               DateTime?
+  rejectionReason          String?
+  interviewDate            DateTime?
+  interviewNotes           String?
+  interviewPassedAt        DateTime?
+  trustScore               Int                      @default(0)
+  trustScoreBreakdown      Json?
+  lastTrustScoreUpdate     DateTime?
+  kycStatus                KycStatus                @default(PENDING)
+  kycSubmittedAt           DateTime?
+  kycApprovedAt            DateTime?
+  kycRejectionReason       String?
+  kycUpdateReason          String?
+  isProfileComplete        Boolean                  @default(false)
+  isActive                 Boolean                  @default(true)
+  hasAdoptedBefore         Boolean                  @default(false)
+  previousAdoptionDetails  String?
+  isFeatured               Boolean                  @default(false)
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
+  deletedAt                DateTime?
+  adoptionRecords          AdoptionRecord[]
+  alerts                   Alert[]                  @relation("ParentAlerts")
+  caseAssignments          CaseAssignment[]
+  familyMembers            FamilyMember[]
+  guardianHistories        GuardianHistory[]        @relation("LinkedParent")
+  addresses                ParentAddress[]
+  documents                ParentDocument[]
+  kycSubmissions           KycSubmission[]
+  references               ParentReference[]
+  user                     User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verifiedBy               User?                    @relation("VerifiedBy", fields: [verifiedById], references: [id])
+  policeVerification       PoliceVerification?
+  trustScoreLogs           TrustScoreLog[]
+  visitRequests            VisitRequest[]
+  assessments              Assessment[]
+
+  @@index([userId])
+  @@index([verificationStatus])
+  @@index([trustScore])
+  @@index([kycStatus])
+  @@index([isActive])
+  @@index([deletedAt])
+  @@map("parents")
+}
+
+model ParentReference {
+  id         String    @id @default(uuid())
+  parentId   String
+  name       String
+  phone      String
+  relation   String
+  email      String?
+  occupation String?
+  isVerified Boolean   @default(false)
+  verifiedAt DateTime?
+  notes      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  parent     Parent    @relation(fields: [parentId], references: [id], onDelete: Cascade)
+
+  @@index([parentId])
+  @@map("parent_references")
+}
+
+model ParentAddress {
+  id           String      @id @default(uuid())
+  parentId     String
+  type         AddressType @default(CURRENT)
+  addressLine1 String
+  addressLine2 String?
+  landmark     String?
+  city         String
+  district     String?
+  state        String
+  pincode      String
+  country      String      @default("India")
+  isVerified   Boolean     @default(false)
+  verifiedAt   DateTime?
+  isPrimary    Boolean     @default(false)
+  latitude     Float?
+  longitude    Float?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  parent       Parent      @relation(fields: [parentId], references: [id], onDelete: Cascade)
+
+  @@index([parentId])
+  @@index([type])
+  @@index([isPrimary])
+  @@map("parent_addresses")
+}
+
+model FamilyMember {
+  id            String           @id @default(uuid())
+  parentId      String
+  name          String
+  relationship  RelationshipType
+  dateOfBirth   DateTime?
+  gender        Gender?
+  occupation    String?
+  annualIncome  Float?
+  isDependent   Boolean          @default(false)
+  contactPhone  String?
+  aadhaarNumber String?
+  notes         String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  parent        Parent           @relation(fields: [parentId], references: [id], onDelete: Cascade)
+
+  @@index([parentId])
+  @@map("family_members")
+}
+
+model ParentDocument {
+  id              String         @id @default(uuid())
+  parentId        String
+  submissionId    String?
+  documentType    DocumentType
+  status          DocumentStatus @default(UPLOADED)
+  fileName        String
+  originalName    String
+  mimeType        String
+  fileSize        Int
+  storagePath     String
+  storageUrl      String?
+  documentNumber  String?
+  issuedBy        String?
+  issuedDate      DateTime?
+  expiryDate      DateTime?
+  reviewedById    String?
+  reviewedAt      DateTime?
+  rejectionReason String?
+  reviewNotes     String?
+  isRequired      Boolean        @default(false)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  parent          Parent         @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  submission      KycSubmission? @relation(fields: [submissionId], references: [id], onDelete: SetNull)
+  reviewedBy      User?          @relation("DocumentReviewedBy", fields: [reviewedById], references: [id])
+
+  @@index([parentId])
+  @@index([submissionId])
+  @@index([documentType])
+  @@index([status])
+  @@index([expiryDate])
+  @@map("parent_documents")
+}
+
+model KycSubmission {
+  id              String           @id @default(uuid())
+  parentId        String
+  status          KycStatus        @default(SUBMITTED)
+  submittedAt     DateTime         @default(now())
+  reviewedAt      DateTime?
+  reviewedById    String?
+  rejectionReason String?
+  notes           String?
+  attemptNumber   Int              @default(1)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  parent          Parent           @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  reviewedBy      User?            @relation("KycSubmissionReviewedBy", fields: [reviewedById], references: [id])
+  documents       ParentDocument[]
+
+  @@index([parentId])
+  @@index([status])
+  @@map("kyc_submissions")
+}
+
+model PoliceVerification {
+  id                 String                   @id @default(uuid())
+  parentId           String                   @unique
+  status             PoliceVerificationStatus @default(NOT_INITIATED)
+  applicationNumber  String?                  @unique
+  appliedAt          DateTime?
+  appliedStation     String?
+  stationAddress     String?
+  officerName        String?
+  officerBadgeNumber String?
+  officerPhone       String?
+  clearedAt          DateTime?
+  certificateNumber  String?
+  certificateUrl     String?
+  validUntil         DateTime?
+  flagReason         String?
+  flagDetails        String?
+  crimeRecordFound   Boolean                  @default(false)
+  crimeRecordDetails String?
+  initiatedById      String?
+  reviewedById       String?
+  reviewNotes        String?
+  lastFollowUpAt     DateTime?
+  nextFollowUpAt     DateTime?
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+  initiatedBy        User?                    @relation("PoliceVerInitiatedBy", fields: [initiatedById], references: [id])
+  parent             Parent                   @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  reviewedBy         User?                    @relation("PoliceVerReviewedBy", fields: [reviewedById], references: [id])
+
+  @@index([parentId])
+  @@index([status])
+  @@index([nextFollowUpAt])
+  @@map("police_verifications")
+}
+
+model TrustScoreLog {
+  id            String          @id @default(uuid())
+  parentId      String
+  event         TrustScoreEvent
+  previousScore Int
+  newScore      Int
+  delta         Int
+  reason        String?
+  performedById String?
+  metadata      Json?
+  createdAt     DateTime        @default(now())
+  parent        Parent          @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  performedBy   User?           @relation("TrustScorePerformedBy", fields: [performedById], references: [id])
+
+  @@index([parentId])
+  @@index([event])
+  @@index([createdAt])
+  @@index([parentId, createdAt])
+  @@map("trust_score_logs")
+}
+
+model Child {
+  id                      String              @id @default(uuid())
+  childCode               String              @unique
+  orphanageId             String?
+  firstName               String
+  lastName                String?
+  dateOfBirth             DateTime?
+  approximateAge          Int?
+  gender                  ChildGender         @default(UNKNOWN)
+  nationality             String              @default("Indian")
+  religion                String?
+  motherTongue            String?
+  caste                   String?
+  height                  Float?
+  weight                  Float?
+  bloodGroup              BloodGroup          @default(UNKNOWN)
+  skinTone                String?
+  eyeColor                String?
+  hairColor               String?
+  distinguishingMarks     String?
+  aadhaarNumber           String?
+  birthCertNumber         String?
+  photo                   String?
+  healthStatus            HealthStatus        @default(UNKNOWN)
+  hasDisability           Boolean             @default(false)
+  disabilityDetails       String?
+  hasChronicCondition     Boolean             @default(false)
+  chronicConditionDetails String?
+  isVaccinationComplete   Boolean             @default(false)
+  currentStatus           ChildStatus         @default(REGISTERED)
+  adoptionStatus          AdoptionStatus      @default(NOT_INITIATED)
+  isAdoptable             Boolean             @default(false)
+  isActive                Boolean             @default(true)
+  admissionDate           DateTime            @default(now())
+  admissionReason         String?
+  entrySource             String?
+  referredBy              String?
+  fatherName              String?
+  fatherStatus            ParentStatus?
+  motherName              String?
+  motherStatus            ParentStatus?
+  parentsMaritalStatus    MaritalStatus?
+  familyBackground        String?
+  foundLocation           String?
+  foundDistrict           String?
+  foundState              String?
+  assignedSocialWorkerId  String?
+  assignedCaseworkerId    String?
+  specialNotes            String?
+  internalNotes           String?
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+  deletedAt               DateTime?
+  adoptionRecord          AdoptionRecord?
+  aiRiskScores            AIRiskScore[]
+  aiSessions              AISession[]
+  alerts                  Alert[]             @relation("ChildAlerts")
+  attendanceRecords       AttendanceRecord[]
+  biometricData           BiometricData[]
+  caseAssignments         CaseAssignment[]
+  documents               ChildDocument[]
+  relationships           ChildRelationship[] @relation("ChildRelationships")
+  relatedInRelationships  ChildRelationship[] @relation("RelatedChild")
+  assignedCaseworker      User?               @relation("AssignedCaseworker", fields: [assignedCaseworkerId], references: [id])
+  assignedSocialWorker    User?               @relation("AssignedSocialWorker", fields: [assignedSocialWorkerId], references: [id])
+  orphanage               Orphanage?          @relation(fields: [orphanageId], references: [id])
+  educationRecords        EducationRecord[]
+  guardianHistories       GuardianHistory[]
+  healthReports           HealthReport[]
+  medicalHistories        MedicalHistory[]
+  visitRequests           VisitRequest[]
+  welfareSessions         WelfareSession[]
+  assessmentSchedules     AssessmentSchedule[]
+  assessments             Assessment[]
+  suggestedVerifications       ManualVerificationQueue[] @relation("SuggestedChildVerification")
+
+  @@index([childCode])
+  @@index([orphanageId])
+  @@index([currentStatus])
+  @@index([adoptionStatus])
+  @@index([healthStatus])
+  @@index([isActive])
+  @@index([isAdoptable])
+  @@index([deletedAt])
+  @@index([admissionDate])
+  @@index([assignedSocialWorkerId])
+  @@index([assignedCaseworkerId])
+  @@index([orphanageId, isActive])
+  @@index([orphanageId, currentStatus])
+  @@map("children")
+}
+
+model MedicalHistory {
+  id                 String                   @id @default(uuid())
+  childId            String
+  conditionName      String
+  severity           MedicalConditionSeverity @default(MILD)
+  diagnosedDate      DateTime?
+  diagnosedBy        String?
+  diagnosedAt        String?
+  isCurrent          Boolean                  @default(true)
+  isChronicCondition Boolean                  @default(false)
+  treatmentDetails   String?
+  medications        String?
+  allergies          String?
+  resolvedDate       DateTime?
+  notes              String?
+  recordedById       String?
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+  child              Child                    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  recordedBy         User?                    @relation("MedHistoryRecordedBy", fields: [recordedById], references: [id])
+
+  @@index([childId])
+  @@index([isCurrent])
+  @@index([severity])
+  @@map("medical_histories")
+}
+
+model HealthReport {
+  id                 String       @id @default(uuid())
+  childId            String
+  reportDate         DateTime
+  reportedBy         String?
+  facility           String?
+  healthStatus       HealthStatus @default(HEALTHY)
+  height             Float?
+  weight             Float?
+  bmi                Float?
+  temperature        Float?
+  bloodPressure      String?
+  heartRate          Int?
+  oxygenLevel        Float?
+  findings           String?
+  diagnosis          String?
+  prescription       String?
+  followUpDate       DateTime?
+  followUpNotes      String?
+  vaccinationGiven   String?
+  vaccinationBatch   String?
+  nextVaccinationDue DateTime?
+  reportFileUrl      String?
+  notes              String?
+  recordedById       String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  child              Child        @relation(fields: [childId], references: [id], onDelete: Cascade)
+  recordedBy         User?        @relation("HealthReportRecordedBy", fields: [recordedById], references: [id])
+
+  @@index([childId])
+  @@index([reportDate])
+  @@index([healthStatus])
+  @@map("health_reports")
+}
+
+enum AttendanceSessionStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+
+enum ManualVerificationState {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum UnknownFaceEventStatus {
+  OPEN
+  RESOLVED
+  MERGED
+}
+
+model AttendanceRecord {
+  id                String            @id @default(uuid())
+  childId           String
+  date              DateTime
+  status            AttendanceStatus  @default(PRESENT)
+  checkInTime       DateTime?
+  checkOutTime      DateTime?
+  activity          String?
+  remarks           String?
+  markedById        String?
+  verifiedBy        String?
+  isVerified        Boolean           @default(false)
+  verifiedById      String?
+  biometricVerified Boolean           @default(false)
+  faceMatchScore    Float?
+  livenessScore     Float?
+  sessionId         String?
+  orphanageId       String?
+  capturedFrameUrl  String?           @db.Text
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  child             Child             @relation(fields: [childId], references: [id], onDelete: Cascade)
+  markedBy          User?             @relation("AttendanceMarkedBy", fields: [markedById], references: [id])
+  verifiedByUser    User?             @relation("AttendanceVerifiedBy", fields: [verifiedById], references: [id])
+  session           AttendanceSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([childId])
+  @@index([date])
+  @@index([status])
+  @@index([sessionId])
+  @@map("attendance_records")
+}
+
+model AttendanceSession {
+  id                      String                    @id @default(uuid())
+  orphanageId             String
+  cameraId                String                    @default("CAM-01-MAIN")
+  startedById             String
+  status                  AttendanceSessionStatus   @default(ACTIVE)
+  startTime               DateTime                  @default(now())
+  endTime                 DateTime?
+  totalRegisteredChildren Int                       @default(0)
+  presentCount            Int                       @default(0)
+  absentCount             Int                       @default(0)
+  unknownFaceCount        Int                       @default(0)
+  duplicateCount          Int                       @default(0)
+  manualVerificationCount Int                       @default(0)
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  orphanage               Orphanage                 @relation(fields: [orphanageId], references: [id])
+  startedBy               User                      @relation("SessionStartedBy", fields: [startedById], references: [id])
+  attendanceRecords       AttendanceRecord[]
+  manualVerifications     ManualVerificationQueue[]
+  unknownFaceEvents       UnknownFaceEvent[]
+  summary                 AttendanceSummary?
+
+  @@index([orphanageId])
+  @@index([status])
+  @@map("attendance_sessions")
+}
+
+model ManualVerificationQueue {
+  id               String                  @id @default(uuid())
+  sessionId        String
+  orphanageId      String
+  suggestedChildId String
+  capturedFrameUrl String?                 @db.Text
+  confidenceScore  Float
+  status           ManualVerificationState @default(PENDING)
+  reviewedById     String?
+  reviewedAt       DateTime?
+  notes            String?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  session          AttendanceSession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  orphanage        Orphanage               @relation(fields: [orphanageId], references: [id])
+  suggestedChild   Child                   @relation("SuggestedChildVerification", fields: [suggestedChildId], references: [id])
+  reviewedBy       User?                   @relation("ManualVerificationReviewer", fields: [reviewedById], references: [id])
+
+  @@index([sessionId])
+  @@index([orphanageId])
+  @@index([status])
+  @@map("manual_verification_queue")
+}
+
+model UnknownFaceEvent {
+  id               String                 @id @default(uuid())
+  sessionId        String
+  orphanageId      String
+  cameraId         String                 @default("CAM-01-MAIN")
+  capturedFrameUrl String?                @db.Text
+  confidenceScore  Float
+  occurrenceCount  Int                    @default(1)
+  firstDetectedAt  DateTime               @default(now())
+  lastDetectedAt   DateTime               @default(now())
+  status           UnknownFaceEventStatus @default(OPEN)
+  resolvedById     String?
+  resolvedAt       DateTime?
+  resolutionNotes  String?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  session          AttendanceSession      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  orphanage        Orphanage              @relation(fields: [orphanageId], references: [id])
+  resolvedBy       User?                  @relation("UnknownFaceResolver", fields: [resolvedById], references: [id])
+
+  @@index([sessionId])
+  @@index([orphanageId])
+  @@index([status])
+  @@map("unknown_face_events")
+}
+
+model AttendanceSummary {
+  id                      String            @id @default(uuid())
+  sessionId               String            @unique
+  orphanageId             String
+  totalRegisteredChildren Int
+  presentCount            Int
+  absentCount             Int
+  attendancePercentage    Float
+  unknownFaceCount        Int
+  duplicateCount          Int
+  manualVerificationCount Int
+  recognitionAccuracy     Float
+  durationMinutes         Int
+  startTime               DateTime
+  endTime                 DateTime
+  averageConfidence       Float
+  createdAt               DateTime          @default(now())
+  session                 AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  orphanage               Orphanage         @relation(fields: [orphanageId], references: [id])
+
+  @@index([orphanageId])
+  @@map("attendance_summaries")
+}
+
+model EducationRecord {
+  id                     String         @id @default(uuid())
+  childId                String
+  level                  EducationLevel @default(NOT_ENROLLED)
+  schoolName             String?
+  schoolAddress          String?
+  schoolBoard            String?
+  className              String?
+  section                String?
+  rollNumber             String?
+  academicYear           String?
+  enrollmentDate         DateTime?
+  completionDate         DateTime?
+  isCurrent              Boolean        @default(true)
+  attendancePercent      Float?
+  lastGradePercent       Float?
+  performanceNotes       String?
+  teacherNotes           String?
+  requiresSpecialSupport Boolean        @default(false)
+  specialSupportDetails  String?
+  hasScholarship         Boolean        @default(false)
+  scholarshipDetails     String?
+  recordedById           String?
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+  child                  Child          @relation(fields: [childId], references: [id], onDelete: Cascade)
+  recordedBy             User?          @relation("EducationRecordedBy", fields: [recordedById], references: [id])
+
+  @@index([childId])
+  @@index([isCurrent])
+  @@map("education_records")
+}
+
+model GuardianHistory {
+  id               String           @id @default(uuid())
+  childId          String
+  guardianName     String
+  relation         GuardianRelation
+  contactPhone     String?
+  contactEmail     String?
+  address          String?
+  aadhaarNumber    String?
+  isCurrent        Boolean          @default(false)
+  startDate        DateTime
+  endDate          DateTime?
+  reasonForChange  String?
+  handoverNotes    String?
+  linkedParentId   String?
+  courtOrderNumber String?
+  courtOrderDate   DateTime?
+  courtOrderUrl    String?
+  recordedById     String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  child            Child            @relation(fields: [childId], references: [id], onDelete: Cascade)
+  linkedParent     Parent?          @relation("LinkedParent", fields: [linkedParentId], references: [id])
+  recordedBy       User?            @relation("GuardianRecordedBy", fields: [recordedById], references: [id])
+
+  @@index([childId])
+  @@index([isCurrent])
+  @@index([linkedParentId])
+  @@map("guardian_histories")
+}
+
+model BiometricData {
+  id                  String        @id @default(uuid())
+  childId             String
+  type                BiometricType
+  capturedAt          DateTime      @default(now())
+  capturedBy          String?
+  faceEncodingJson    String?
+  faceImageUrl        String?
+  faceModelVersion    String?
+  fingerprintTemplate String?
+  fingerprintFinger   String?
+  templateData        String?
+  deviceId            String?
+  quality             Float?
+  isActive            Boolean       @default(true)
+  notes               String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  capturedByUser      User?         @relation("BiometricCapturedBy", fields: [capturedBy], references: [id])
+  child               Child         @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@index([childId])
+  @@index([type])
+  @@index([isActive])
+  @@map("biometric_data")
+}
+
+model ChildDocument {
+  id              String            @id @default(uuid())
+  childId         String
+  documentType    ChildDocumentType
+  title           String
+  fileName        String
+  originalName    String
+  mimeType        String
+  fileSize        Int
+  storagePath     String
+  storageUrl      String?
+  documentNumber  String?
+  issuedBy        String?
+  issuedDate      DateTime?
+  expiryDate      DateTime?
+  isVerified      Boolean           @default(false)
+  verifiedById    String?
+  verifiedAt      DateTime?
+  rejectionReason String?
+  notes           String?
+  uploadedById    String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  child           Child             @relation(fields: [childId], references: [id], onDelete: Cascade)
+  uploadedBy      User?             @relation("ChildDocumentUploadedBy", fields: [uploadedById], references: [id])
+  verifiedBy      User?             @relation("ChildDocumentVerifiedBy", fields: [verifiedById], references: [id])
+
+  @@index([childId])
+  @@index([documentType])
+  @@map("child_documents")
+}
+
+model ChildRelationship {
+  id                String   @id @default(uuid())
+  childId           String
+  relatedChildId    String?
+  relatedPersonName String?
+  relationship      String
+  notes             String?
+  isConfirmed       Boolean  @default(false)
+  confirmedById     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  child             Child    @relation("ChildRelationships", fields: [childId], references: [id], onDelete: Cascade)
+  confirmedBy       User?    @relation("RelationshipConfirmedBy", fields: [confirmedById], references: [id])
+  relatedChild      Child?   @relation("RelatedChild", fields: [relatedChildId], references: [id])
+
+  @@index([childId])
+  @@index([relatedChildId])
+  @@map("child_relationships")
+}
+
+model AdoptionRecord {
+  id                    String             @id @default(uuid())
+  childId               String             @unique
+  status                AdoptionStatus     @default(NOT_INITIATED)
+  adoptiveParentId      String?
+  eligibilityDate       DateTime?
+  matchedDate           DateTime?
+  legalProcessStart     DateTime?
+  completedDate         DateTime?
+  cancelledDate         DateTime?
+  cancellationReason    String?
+  courtName             String?
+  courtCaseNumber       String?
+  courtOrderDate        DateTime?
+  courtOrderUrl         String?
+  adoptionCertNumber    String?
+  adoptionCertUrl       String?
+  postAdoptionFollowUp1 DateTime?
+  postAdoptionFollowUp2 DateTime?
+  postAdoptionNotes     String?
+  caraReferenceNumber   String?
+  caraStatus            String?
+  reviewedById          String?
+  reviewNotes           String?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  documents             AdoptionDocument[]
+  assessmentSchedules   AssessmentSchedule[]
+  adoptiveParent        Parent?            @relation(fields: [adoptiveParentId], references: [id])
+  child                 Child              @relation(fields: [childId], references: [id], onDelete: Cascade)
+  reviewedBy            User?              @relation("AdoptionReviewedBy", fields: [reviewedById], references: [id])
+
+  @@index([status])
+  @@index([adoptiveParentId])
+  @@index([completedDate])
+  @@map("adoption_records")
+}
+
+model AdoptionDocument {
+  id               String         @id @default(uuid())
+  adoptionRecordId String
+  documentType     String
+  fileName         String
+  originalName     String
+  mimeType         String
+  fileSize         Int
+  storagePath      String
+  storageUrl       String?
+  isVerified       Boolean        @default(false)
+  verifiedById     String?
+  verifiedAt       DateTime?
+  uploadedById     String
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  adoptionRecord   AdoptionRecord @relation(fields: [adoptionRecordId], references: [id], onDelete: Cascade)
+
+  @@unique([adoptionRecordId, documentType])
+  @@index([adoptionRecordId])
+  @@map("adoption_documents")
+}
+
+model SocialWorkerProfile {
+  id                String                @id @default(uuid())
+  userId            String                @unique
+  employeeId        String?               @unique
+  designation       String?
+  department        String?
+  supervisorId      String?
+  qualification     String?
+  specialization    String?
+  yearsOfExperience Int?
+  licenseNumber     String?
+  licenseExpiry     DateTime?
+  maxCaseLoad       Int                   @default(20)
+  isActive          Boolean               @default(true)
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  caseAssignments   CaseAssignment[]
+  supervisor        SocialWorkerProfile?  @relation("SWPSupervisor", fields: [supervisorId], references: [id])
+  subordinates      SocialWorkerProfile[] @relation("SWPSupervisor")
+  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isActive])
+  @@index([supervisorId])
+  @@map("social_worker_profiles")
+}
+
+model CaseAssignment {
+  id                    String               @id @default(uuid())
+  socialWorkerProfileId String
+  childId               String?
+  parentId              String?
+  status                CaseAssignmentStatus @default(ACTIVE)
+  assignedAt            DateTime             @default(now())
+  closedAt              DateTime?
+  notes                 String?
+  priority              Int                  @default(0)
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  child                 Child?               @relation(fields: [childId], references: [id])
+  parent                Parent?              @relation(fields: [parentId], references: [id])
+  socialWorker          SocialWorkerProfile  @relation(fields: [socialWorkerProfileId], references: [id], onDelete: Cascade)
+
+  @@index([socialWorkerProfileId])
+  @@index([childId])
+  @@index([parentId])
+  @@index([status])
+  @@index([socialWorkerProfileId, childId, status])
+  @@map("case_assignments")
+}
+
+model VisitRequest {
+  id                     String             @id @default(uuid())
+  requestId              String             @unique
+  parentId               String
+  orphanageId            String
+  childId                String?
+  visitDate              DateTime           @db.Date
+  visitTime              String
+  purpose                String
+  reason                 String?
+  adoptionTimeline       String?
+  visitorsCount          Int                @default(1)
+  relationshipOfVisitors String?
+  specialRequirements    String?
+  familyBackground       String?
+  status                 VisitRequestStatus @default(PENDING)
+  visitType              VisitType          @default(REGULAR_VISIT)
+  riskLevel              RiskLevel          @default(LOW)
+  trustScore             Int                @default(0)
+  faceMatch              Int                @default(0)
+  documentAuthenticity   String?
+  behaviourPrediction    String?
+  adoptionReadiness      String?
+  recommendation         String?
+  verification           Json?
+  meetingRoom            String?
+  assignedStaff          String?
+  qrStatus               String             @default("Pending")
+  qrCode                 String?
+  checkInTime            DateTime?
+  checkOutTime           DateTime?
+  expectedArrivalTime    String?
+  uploadedDocuments      String[]
+  missingDocuments       String[]
+  reviewedById           String?
+  reviewedAt             DateTime?
+  approvalNotes          String?
+  rejectionReason        String?
+  rejectionComments      String?
+  originalVisitDate      DateTime?          @db.Date
+  originalVisitTime      String?
+  rescheduleReason       String?
+  rescheduleCount        Int                @default(0)
+  visitSupervisorId      String?
+  completedAt            DateTime?
+  noShowReason           String?
+  postVisitFeedback      Json?
+  parentNotified         Boolean            @default(false)
+  notifiedAt             DateTime?
+  instructions           String?
+  adoptionRecordId       String?
+  agreedToRules          Boolean            @default(false)
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  child                  Child?             @relation(fields: [childId], references: [id])
+  orphanage              Orphanage          @relation(fields: [orphanageId], references: [id], onDelete: Cascade)
+  parent                 Parent             @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  reviewedBy             User?              @relation("VisitRequestReviewedBy", fields: [reviewedById], references: [id])
+  visitSupervisor        User?              @relation("VisitRequestSupervisor", fields: [visitSupervisorId], references: [id])
+  welfareSessions        WelfareSession[]
+
+  @@index([parentId])
+  @@index([orphanageId])
+  @@index([childId])
+  @@index([status])
+  @@index([riskLevel])
+  @@index([visitDate])
+  @@index([createdAt])
+  @@index([requestId])
+  @@index([orphanageId, status])
+  @@index([orphanageId, visitDate])
+  @@index([parentId, status])
+  @@map("visit_requests")
+}
+
+model WelfareSession {
+  id              String                 @id @default(uuid())
+  childId         String
+  visitRequestId  String?
+  conductedById   String?
+  aiSessionId     String?
+  scheduledAt     DateTime
+  conductedAt     DateTime?
+  status          WelfareSessionStatus   @default(SCHEDULED)
+  outcome         WelfareSessionOutcome?
+  sessionNotes    String?
+  concernDetails  String?
+  escalationNotes String?
+  actionItems     String?
+  nextSessionDue  DateTime?
+  followUpNotes   String?
+  durationMinutes Int?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  aiSession       AISession?             @relation(fields: [aiSessionId], references: [id])
+  child           Child                  @relation(fields: [childId], references: [id], onDelete: Cascade)
+  conductedBy     User?                  @relation("SessionConductedBy", fields: [conductedById], references: [id])
+  visitRequest    VisitRequest?          @relation(fields: [visitRequestId], references: [id])
+
+  @@index([childId])
+  @@index([conductedById])
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([nextSessionDue])
+  @@index([childId, scheduledAt])
+  @@map("welfare_sessions")
+}
+
+model Notification {
+  id                String              @id @default(uuid())
+  userId            String
+  type              NotificationType
+  channel           NotificationChannel @default(IN_APP)
+  title             String
+  body              String
+  relatedEntityType String?
+  relatedEntityId   String?
+  isRead            Boolean             @default(false)
+  readAt            DateTime?
+  sentAt            DateTime?
+  deliveryStatus    String?
+  failureReason     String?
+  retryCount        Int                 @default(0)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([type])
+  @@index([createdAt])
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+model Alert {
+  id              String        @id @default(uuid())
+  severity        AlertSeverity @default(MEDIUM)
+  type            AlertType
+  status          AlertStatus   @default(OPEN)
+  title           String
+  details         String?
+  childId         String?
+  parentId        String?
+  orphanageId     String?
+  createdById     String?
+  resolvedById    String?
+  acknowledgedAt  DateTime?
+  resolvedAt      DateTime?
+  resolutionNotes String?
+  isAutoGenerated Boolean       @default(false)
+  sourceService   String?
+  metadata        Json?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  riskScores      AIRiskScore[]
+  child           Child?        @relation("ChildAlerts", fields: [childId], references: [id])
+  createdBy       User?         @relation("AlertCreatedBy", fields: [createdById], references: [id])
+  orphanage       Orphanage?    @relation("OrphanageAlerts", fields: [orphanageId], references: [id])
+  parent          Parent?       @relation("ParentAlerts", fields: [parentId], references: [id])
+  resolvedBy      User?         @relation("AlertResolvedBy", fields: [resolvedById], references: [id])
+
+  @@index([severity])
+  @@index([type])
+  @@index([status])
+  @@index([childId])
+  @@index([orphanageId])
+  @@index([createdAt])
+  @@index([status, severity])
+  @@index([childId, status])
+  @@map("alerts")
+}
+
+model AISession {
+  id                String                  @id @default(uuid())
+  sessionType       AISessionType
+  status            AISessionStatus         @default(SCHEDULED)
+  provider          AIProvider              @default(OPENAI_GPT4)
+  childId           String?
+  initiatedById     String?
+  scheduledAt       DateTime?
+  startedAt         DateTime?
+  completedAt       DateTime?
+  cancelledAt       DateTime?
+  failureReason     String?
+  totalTokensUsed   Int?
+  estimatedCostUsd  Float?
+  summary           String?
+  riskLevelDetected RiskLevel?
+  confidenceScore   Float?
+  modelVersion      String?
+  sessionConfig     Json?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  messages          AIConversationMessage[]
+  child             Child?                  @relation(fields: [childId], references: [id])
+  initiatedBy       User?                   @relation("AISessionUser", fields: [initiatedById], references: [id])
+  welfareSessions   WelfareSession[]
+
+  @@index([childId])
+  @@index([initiatedById])
+  @@index([sessionType])
+  @@index([status])
+  @@index([scheduledAt])
+  @@map("ai_sessions")
+}
+
+model AIConversationMessage {
+  id               String      @id @default(uuid())
+  sessionId        String
+  role             MessageRole
+  content          String
+  sequence         Int
+  promptTokens     Int?
+  completionTokens Int?
+  sentimentScore   Float?
+  detectedTopics   Json?
+  flaggedContent   Boolean     @default(false)
+  flagReason       String?
+  createdAt        DateTime    @default(now())
+  session          AISession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, sequence])
+  @@index([sessionId])
+  @@map("ai_conversation_messages")
+}
+
+model AIRiskScore {
+  id                 String    @id @default(uuid())
+  childId            String
+  riskLevel          RiskLevel
+  score              Int
+  attendanceScore    Int?
+  healthScore        Int?
+  welfareScore       Int?
+  guardianScore      Int?
+  adoptionScore      Int?
+  computedAt         DateTime  @default(now())
+  isComputedBySystem Boolean   @default(true)
+  computedById       String?
+  modelVersion       String?
+  notes              String?
+  alertTriggered     Boolean   @default(false)
+  alertId            String?
+  alert              Alert?    @relation(fields: [alertId], references: [id])
+  child              Child     @relation(fields: [childId], references: [id], onDelete: Cascade)
+  computedBy         User?     @relation("RiskScoreComputedBy", fields: [computedById], references: [id])
+
+  @@index([childId])
+  @@index([riskLevel])
+  @@index([computedAt])
+  @@index([childId, computedAt])
+  @@index([riskLevel, computedAt])
+  @@map("ai_risk_scores")
+}
+
+model ReportExport {
+  id            String       @id @default(uuid())
+  reportType    ReportType
+  format        ReportFormat @default(PDF)
+  status        ReportStatus @default(QUEUED)
+  requestedById String?
+  filters       Json?
+  fileName      String?
+  storagePath   String?
+  storageUrl    String?
+  fileSizeBytes Int?
+  queuedAt      DateTime     @default(now())
+  startedAt     DateTime?
+  completedAt   DateTime?
+  expiresAt     DateTime?
+  failureReason String?
+  retryCount    Int          @default(0)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  requestedBy   User?        @relation("ReportRequestedBy", fields: [requestedById], references: [id])
+
+  @@index([requestedById])
+  @@index([reportType])
+  @@index([status])
+  @@index([createdAt])
+  @@index([expiresAt])
+  @@map("report_exports")
+}
+
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  dataType    String
+  description String?
+  group       String?
+  isPublic    Boolean  @default(false)
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  updatedBy   User?    @relation("SettingUpdatedBy", fields: [updatedById], references: [id])
+
+  @@index([group])
+  @@index([isPublic])
+  @@map("system_settings")
+}
+
+enum Role {
+  ADMIN
+  ORPHANAGE
+  PARENT
+  SOCIAL_WORKER
+  GUEST
+  DONOR
+}
+
+enum OtpPurpose {
+  EMAIL_VERIFICATION
+  PHONE_VERIFICATION
+  TWO_FACTOR_AUTH
+  PASSWORD_RESET
+  SENSITIVE_ACTION
+}
+
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+  FACEBOOK
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum MessageRole {
+  SYSTEM
+  USER
+  ASSISTANT
+}
+
+enum MaritalStatus {
+  SINGLE
+  MARRIED
+  DIVORCED
+  WIDOWED
+  SEPARATED
+}
+
+enum EmploymentType {
+  EMPLOYED_FULL_TIME
+  EMPLOYED_PART_TIME
+  SELF_EMPLOYED
+  BUSINESS_OWNER
+  UNEMPLOYED
+  RETIRED
+  STUDENT
+}
+
+enum IncomeRange {
+  BELOW_10K
+  RANGE_10K_25K
+  RANGE_25K_50K
+  RANGE_50K_100K
+  ABOVE_100K
+}
+
+enum KycStatus {
+  PENDING
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  RE_UPLOAD_REQUIRED
+}
+
+enum HouseOwnership {
+  OWNED
+  RENTED
+  LEASED
+  FAMILY_OWNED
+}
+
+enum GenderPreference {
+  MALE
+  FEMALE
+  ANY
+}
+
+enum ParentVerificationStatus {
+  PENDING
+  UNDER_REVIEW
+  DOCUMENTS_REQUIRED
+  INTERVIEW_SCHEDULED
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum DocumentType {
+  AADHAAR_CARD
+  PAN_CARD
+  PASSPORT
+  DRIVING_LICENSE
+  VOTER_ID
+  BIRTH_CERTIFICATE
+  MARRIAGE_CERTIFICATE
+  INCOME_PROOF
+  ADDRESS_PROOF
+  BANK_STATEMENT
+  ITR_DOCUMENT
+  EMPLOYMENT_LETTER
+  NOC_CERTIFICATE
+  POLICE_CLEARANCE
+  MEDICAL_CERTIFICATE
+  PHOTO_ID
+  OTHER
+}
+
+enum DocumentStatus {
+  UPLOADED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum AddressType {
+  PERMANENT
+  CURRENT
+  OFFICE
+}
+
+enum PoliceVerificationStatus {
+  NOT_INITIATED
+  INITIATED
+  IN_PROGRESS
+  CLEARED
+  FLAGGED
+  REJECTED
+}
+
+enum RelationshipType {
+  SPOUSE
+  CHILD
+  PARENT
+  SIBLING
+  GRANDPARENT
+  UNCLE_AUNT
+  GUARDIAN
+  OTHER
+}
+
+enum TrustScoreEvent {
+  PROFILE_COMPLETED
+  EMAIL_VERIFIED
+  PHONE_VERIFIED
+  DOCUMENT_APPROVED
+  DOCUMENT_REJECTED
+  POLICE_CLEARED
+  POLICE_FLAGGED
+  INCOME_VERIFIED
+  ADDRESS_VERIFIED
+  INTERVIEW_PASSED
+  INTERVIEW_FAILED
+  REFERENCE_VERIFIED
+  PREVIOUS_ADOPTION
+  VISIT_COMPLETED
+  ACCOUNT_SUSPENDED
+  MANUAL_ADJUSTMENT
+}
+
+enum ChildGender {
+  MALE
+  FEMALE
+  OTHER
+  UNKNOWN
+}
+
+enum ChildStatus {
+  REGISTERED
+  ACTIVE
+  ADOPTED
+  REUNITED_WITH_FAMILY
+  TRANSFERRED
+  DECEASED
+  MISSING
+  RUNAWAY
+}
+
+enum AdoptionStatus {
+  NOT_INITIATED
+  ELIGIBLE
+  UNDER_REVIEW
+  MATCHED
+  LEGAL_PROCESS
+  COMPLETED
+  CANCELLED
+  ON_HOLD
+}
+
+enum HealthStatus {
+  HEALTHY
+  UNDER_TREATMENT
+  CRITICAL
+  RECOVERING
+  CHRONIC_CONDITION
+  UNKNOWN
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+  HOLIDAY
+  SICK_LEAVE
+}
+
+enum EducationLevel {
+  NOT_ENROLLED
+  PRE_SCHOOL
+  PRIMARY
+  MIDDLE
+  SECONDARY
+  HIGHER_SECONDARY
+  VOCATIONAL
+  COLLEGE
+  GRADUATED
+  SPECIAL_EDUCATION
+}
+
+enum BloodGroup {
+  A_POSITIVE
+  A_NEGATIVE
+  B_POSITIVE
+  B_NEGATIVE
+  AB_POSITIVE
+  AB_NEGATIVE
+  O_POSITIVE
+  O_NEGATIVE
+  UNKNOWN
+}
+
+enum GuardianRelation {
+  BIOLOGICAL_PARENT
+  ADOPTIVE_PARENT
+  FOSTER_PARENT
+  GRANDPARENT
+  UNCLE_AUNT
+  SIBLING
+  LEGAL_GUARDIAN
+  ORPHANAGE_STAFF
+  SOCIAL_WORKER
+  OTHER
+}
+
+enum ChildDocumentType {
+  BIRTH_CERTIFICATE
+  AADHAAR_CARD
+  SCHOOL_CERTIFICATE
+  MEDICAL_RECORD
+  VACCINATION_CARD
+  COURT_ORDER
+  SURRENDER_DEED
+  POLICE_REPORT
+  PHOTO_ID
+  RELINQUISHMENT_DEED
+  ADOPTION_ORDER
+  OTHER
+}
+
+enum MedicalConditionSeverity {
+  MILD
+  MODERATE
+  SEVERE
+  CRITICAL
+}
+
+enum BiometricType {
+  FINGERPRINT
+  FACE_RECOGNITION
+  IRIS_SCAN
+  VOICE_PRINT
+}
+
+enum ChildRelationshipType {
+  SIBLING
+  TWIN
+  HALF_SIBLING
+  COUSIN
+  STEP_SIBLING
+  OTHER
+}
+
+enum ParentStatus {
+  ALIVE
+  DECEASED
+  UNKNOWN
+  ABANDONED
+}
+
+enum OrganizationType {
+  NGO
+  GOVERNMENT
+  TRUST
+  SOCIETY
+  PRIVATE
+  RELIGIOUS
+}
+
+enum OrphanageStatus {
+  ACTIVE
+  INACTIVE
+  UNDER_INSPECTION
+  LICENSE_EXPIRED
+  SUSPENDED
+  CLOSED
+}
+
+enum StaffType {
+  ADMIN
+  ORPHANAGE
+}
+
+enum OrphanageStaffRole {
+  SUPER_ADMIN
+  ADMIN
+  MODERATOR
+  GOVERNMENT_OFFICER
+  ADMINISTRATOR
+  CARETAKER
+  TEACHER
+  MEDICAL_STAFF
+  DOCTOR
+  NURSE
+  SECURITY_GUARD
+  COUNSELOR
+  SOCIAL_WORKER
+  VOLUNTEER
+  ACCOUNTANT
+  COOK
+  CLEANER
+  OTHER
+}
+
+enum LicenseType {
+  REGISTRATION_CERTIFICATE
+  GOVERNMENT_LICENSE
+  NGO_CERTIFICATE
+  ADOPTION_AGENCY_LICENSE
+  CHILDCARE_LICENSE
+  FIRE_SAFETY_NOC
+  HEALTH_SAFETY_NOC
+  OTHER
+}
+
+enum LicenseStatus {
+  VALID
+  EXPIRED
+  UNDER_RENEWAL
+  REVOKED
+  PENDING
+  VERIFIED
+}
+
+enum VisitRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+  RESCHEDULED
+}
+
+enum VisitType {
+  INITIAL_ASSESSMENT
+  REGULAR_VISIT
+  PRE_ADOPTION_VISIT
+  POST_ADOPTION_VISIT
+  WELFARE_CHECK
+  SUPERVISED
+}
+
+enum WelfareSessionStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  MISSED
+}
+
+enum WelfareSessionOutcome {
+  NORMAL
+  CONCERN_RAISED
+  ESCALATED
+  FOLLOW_UP_REQUIRED
+}
+
+enum CaseAssignmentStatus {
+  ACTIVE
+  CLOSED
+  TRANSFERRED
+  SUSPENDED
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  SMS
+  PUSH
+}
+
+enum NotificationType {
+  ADOPTION_STATUS_CHANGED
+  VISIT_REQUEST_UPDATE
+  DOCUMENT_REVIEW_RESULT
+  POLICE_VERIFICATION_UPDATE
+  KYC_STATUS_CHANGED
+  TRUST_SCORE_UPDATED
+  WELFARE_SESSION_REMINDER
+  HEALTH_CHECKUP_DUE
+  VACCINATION_DUE
+  ALERT_RAISED
+  ACCOUNT_STATUS_CHANGED
+  SYSTEM_ANNOUNCEMENT
+  AI_SESSION_SCHEDULED
+  DOCUMENT_EXPIRY_WARNING
+}
+
+enum AlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AlertType {
+  CHILD_MISSING
+  CHILD_RUNAWAY
+  HEALTH_CRITICAL
+  AI_RISK_SPIKE
+  LOW_ATTENDANCE
+  WELFARE_SESSION_OVERDUE
+  DOCUMENT_EXPIRED
+  LICENSE_EXPIRED
+  SYSTEM_ANOMALY
+  UNAUTHORIZED_ACCESS
+  ADOPTION_BLOCKED
+  MANUAL
+  KYC_VERIFICATION_FAILED
+}
+
+enum AlertStatus {
+  OPEN
+  ACKNOWLEDGED
+  IN_PROGRESS
+  RESOLVED
+  FALSE_ALARM
+}
+
+enum AISessionType {
+  WELFARE_CHAT
+  RISK_ASSESSMENT
+  INTERVIEW
+  COUNSELING_SUPPORT
+  SAHAYAK_QUERY
+}
+
+enum AISessionStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  FAILED
+}
+
+enum AIProvider {
+  OPENAI_GPT4
+  GOOGLE_GEMINI
+  AWS_BEDROCK
+  AZURE_OPENAI
+  LOCAL_MODEL
+}
+
+enum RiskLevel {
+  VERY_LOW
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ReportType {
+  ATTENDANCE
+  ADOPTION_PIPELINE
+  HEALTH_SUMMARY
+  TRUST_SCORE_HISTORY
+  AI_SESSION_SUMMARY
+  RISK_ANALYSIS
+  MONTHLY_COMPLIANCE
+  POLICE_VERIFICATION
+  DOCUMENT_STATUS
+  WELFARE_SESSION
+}
+
+enum ReportFormat {
+  PDF
+  EXCEL
+  CSV
+  JSON
+}
+
+enum ReportStatus {
+  QUEUED
+  GENERATING
+  COMPLETED
+  FAILED
+}
+
+model AssessmentSchedule {
+  id                 String           @id @default(uuid())
+  adoptionId         String
+  childId            String
+  nextAssessmentDate DateTime
+  frequencyMonths    Int              @default(6)
+  completed          Boolean          @default(false)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  adoption           AdoptionRecord   @relation(fields: [adoptionId], references: [id], onDelete: Cascade)
+  child              Child            @relation(fields: [childId], references: [id], onDelete: Cascade)
+  assessments        Assessment[]
+
+  @@index([childId])
+  @@index([adoptionId])
+  @@index([nextAssessmentDate])
+  @@index([completed])
+  @@map("assessment_schedules")
+}
+
+model Assessment {
+  id             String              @id @default(uuid())
+  scheduleId     String?
+  childId        String
+  parentId       String
+  assessmentDate DateTime            @default(now())
+  faceScore      Float               @default(0)
+  voiceScore     Float               @default(0)
+  answerScore    Float               @default(0)
+  behaviorScore  Float               @default(0)
+  overallRisk    RiskLevel           @default(LOW)
+  summary        String?
+  recommendation String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  schedule       AssessmentSchedule? @relation(fields: [scheduleId], references: [id])
+  child          Child               @relation(fields: [childId], references: [id], onDelete: Cascade)
+  parent         Parent              @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  answers        Answer[]
+
+  @@index([childId])
+  @@index([parentId])
+  @@index([scheduleId])
+  @@index([overallRisk])
+  @@map("assessments")
+}
+
+model Question {
+  id        String   @id @default(uuid())
+  minAge    Int      @default(0)
+  maxAge    Int      @default(16)
+  category  String   @default("WELFARE")
+  question  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  answers   Answer[]
+
+  @@index([minAge, maxAge])
+  @@index([category])
+  @@map("assessment_questions")
+}
+
+model Answer {
+  id           String     @id @default(uuid())
+  assessmentId String
+  questionId   String
+  answer       String
+  sentiment    String?
+  confidence   Float?
+  createdAt    DateTime   @default(now())
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  question     Question   @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([assessmentId])
+  @@index([questionId])
+  @@map("assessment_answers")
+}
+
+model Donor {
+  id               String            @id @default(uuid())
+  userId           String?           @unique
+  user             User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName         String
+  email            String            @unique
+  mobileNumber     String
+  address          String
+  city             String
+  password         String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  donations        Donation[]
+  donationRequests DonationRequest[]
+
+  @@map("donors")
+}
+
+model Donation {
+  id            String   @id @default(uuid())
+  donorId       String
+  donor         Donor    @relation(fields: [donorId], references: [id], onDelete: Cascade)
+  amount        Float
+  category      String   // Education, Healthcare, Nutrition, General
+  paymentMethod String   // UPI, Credit Card, Bank Transfer, NetBanking
+  status        String   @default("COMPLETED")
+  transactionId String
+  message       String?
+  orphanageId   String?
+  createdAt     DateTime @default(now())
+
+  @@index([donorId])
+  @@map("donations")
+}
+
+model DonationRequest {
+  id              String                  @id @default(uuid())
+  donorId         String
+  donor           Donor                   @relation(fields: [donorId], references: [id], onDelete: Cascade)
+  orphanageId     String
+  donationType    String                  // Food, Clothes, Books, School Supplies, Toys, Medicine, Furniture, Other
+  quantity        Int
+  preferredDate   DateTime
+  preferredTime   String                  // e.g. "10:00 AM"
+  message         String?
+  status          DonationRequestStatus   @default(PENDING)
+  rejectionReason String?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  @@index([donorId])
+  @@index([orphanageId])
+  @@map("donation_requests")
+}
+
+enum DonationRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  COMPLETED
+  CANCELLED
+}
