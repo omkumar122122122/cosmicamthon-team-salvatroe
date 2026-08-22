@@ -1,0 +1,7 @@
+export enum ChildRegistrationStatus {
+  DRAFT = 'DRAFT',
+  REGISTERED = 'REGISTERED',
+  PENDING_VERIFICATION = 'PENDING_VERIFICATION',
+  ACTIVE = 'ACTIVE',
+  ARCHIVED = 'ARCHIVED',
+}
