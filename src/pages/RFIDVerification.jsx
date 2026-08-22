@@ -1,24 +1,21 @@
 import { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FiShield,
-  FiCheckCircle,
   FiAlertCircle,
   FiCreditCard,
   FiCornerDownLeft,
-  FiArrowRight,
-  FiUser,
-  FiClock,
-  FiMapPin,
 } from "react-icons/fi";
-import { rfidService } from "../services/rfidService";
-import { classNames } from "../utils/formatters";
+import { rfidService } from "../services/rfidService.js";
+import { classNames } from "../utils/formatters.js";
 
 export default function RFIDVerification() {
   const [rfidInput, setRfidInput] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState(null);
   const inputRef = useRef(null);
+  const navigate = useNavigate();
 
   const demoSuggestions = ["RFID-STF-001", "RFID-STF-002", "RFID-STF-003"];
 
@@ -41,12 +38,9 @@ export default function RFIDVerification() {
     try {
       const response = await rfidService.verifyRFID(trimmed);
 
-      if (response.success) {
-        setVerificationResult({
-          type: "success",
-          message: "RFID VERIFIED",
-          data: response.data,
-        });
+      if (response.success && response.data?.rfidTag) {
+        // Normal React route navigation to the canonical RFID details page
+        navigate(`/rfid/${response.data.rfidTag}`);
       } else {
         setVerificationResult({
           type: "error",
@@ -179,65 +173,16 @@ export default function RFIDVerification() {
           </div>
         </div>
 
-        {/* Verification Result Feedback */}
+        {/* Verification Result Feedback (Errors / Warnings) */}
         <AnimatePresence mode="wait">
           {verificationResult && (
             <motion.div
-              key={verificationResult.type + (verificationResult.data?.rfidTag || verificationResult.message)}
+              key={verificationResult.type + verificationResult.message}
               initial={{ opacity: 0, y: 12, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -8, scale: 0.98 }}
               transition={{ duration: 0.2 }}
             >
-              {/* SUCCESS STATE */}
-              {verificationResult.type === "success" && (
-                <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/40 p-5 backdrop-blur-md">
-                  <div className="flex items-center gap-3 text-emerald-400">
-                    <FiCheckCircle className="h-5 w-5 shrink-0" />
-                    <span className="text-sm font-bold tracking-wider uppercase">
-                      ✓ {verificationResult.message}
-                    </span>
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-2 gap-3 border-t border-emerald-500/20 pt-3 text-xs">
-                    <div>
-                      <span className="text-slate-400">Staff:</span>
-                      <p className="mt-0.5 font-semibold text-white">
-                        {verificationResult.data?.name}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-slate-400">RFID:</span>
-                      <p className="mt-0.5 font-mono font-semibold text-white">
-                        {verificationResult.data?.rfidTag}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-slate-400">Access Type:</span>
-                      <p className="mt-0.5 font-semibold text-emerald-300">
-                        {verificationResult.data?.accessType}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-slate-400">Gate:</span>
-                      <p className="mt-0.5 font-semibold text-white">
-                        {verificationResult.data?.gate}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 flex items-center justify-between border-t border-emerald-500/10 pt-2 text-[11px] text-slate-400">
-                    <span className="flex items-center gap-1">
-                      <FiClock className="h-3 w-3 text-slate-500" />
-                      {verificationResult.data?.date} • {verificationResult.data?.time}
-                    </span>
-                    <span className="font-semibold text-emerald-400">
-                      {verificationResult.data?.accessStatus}
-                    </span>
-                  </div>
-                </div>
-              )}
-
               {/* INVALID RFID STATE */}
               {verificationResult.type === "error" && (
                 <div className="rounded-2xl border border-rose-500/30 bg-rose-950/40 p-4 backdrop-blur-md">
@@ -248,7 +193,7 @@ export default function RFIDVerification() {
                     </span>
                   </div>
                   <p className="mt-2 text-xs text-rose-300/80">
-                    Card ID not registered in the system. Please check the ID or try one of the test cards above.
+                    Card ID not recognized in the system. Please check the card ID or try one of the test cards above.
                   </p>
                 </div>
               )}
