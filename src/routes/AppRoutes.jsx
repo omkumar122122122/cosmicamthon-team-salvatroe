@@ -39,6 +39,8 @@ import DonorRequests from "../pages/DonorRequests.jsx";
 import MyDonations from "../pages/MyDonations.jsx";
 import OrphanageDonationRequests from "../pages/OrphanageDonationRequests.jsx";
 import NearbyOrphanages from "../pages/NearbyOrphanages.jsx";
+import RFIDVerification from "../pages/RFIDVerification.jsx";
+import RFIDCardDetails from "../pages/RFIDCardDetails.jsx";
 import ProtectedRoute from "./ProtectedRoute.jsx";
 
 export default function AppRoutes() {
@@ -47,6 +49,10 @@ export default function AppRoutes() {
       {/* Default → login */}
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<Login />} />
+
+      {/* ── RFID Staff Verification Terminal & Details ─────── */}
+      <Route path="/rfid" element={<RFIDVerification />} />
+      <Route path="/rfid/:rfidId" element={<RFIDCardDetails />} />
 
       {/* ── Donor Auth Public Routes ─────────────────────── */}
       <Route path="/donor/login" element={<DonorLogin />} />
