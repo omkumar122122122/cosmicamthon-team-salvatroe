@@ -6,6 +6,7 @@ export default defineConfig({
   server: {
     host: "0.0.0.0",
     port: 5173,
+    cors: true,
     proxy: {
       // Forward all /api/v1 requests to the NestJS backend
       // Eliminates CORS issues in development
