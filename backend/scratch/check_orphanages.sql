@@ -1,0 +1,1 @@
+SELECT id, code, name, "isActive", "isVerified", "deletedAt" FROM orphanages;

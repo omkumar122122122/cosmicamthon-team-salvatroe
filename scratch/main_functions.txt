@@ -1,0 +1,73 @@
+28: # InsightFace FaceAnalysis — face DETECTION ONLY
+35: from insightface.app import FaceAnalysis
+40: _face_app: Optional[FaceAnalysis] = None
+43: _face_app = FaceAnalysis(name="buffalo_l", allowed_modules=["detection"])
+46: f"✅ InsightFace FaceAnalysis [detection] initialised on "
+53: print(f"❌ InsightFace FaceAnalysis initialisation failed: {_init_exc}")
+63: _recognition_app: Optional[FaceAnalysis] = None
+65: _recognition_app = FaceAnalysis(
+70: f"✅ InsightFace FaceAnalysis [detection+recognition] initialised on "
+148: def calculate_cosine_similarity(vec_a: List[float], vec_b: List[float]) -> float:
+161: def extract_frame_embedding(image_bytes: bytes, session_id: str) -> List[float]:
+172: @app.get("/health")
+173: def health_check():
+177: "engine": "OpenCV / NumPy / InsightFace FaceAnalysis (SCRFD det_10g)",
+187: # runs InsightFace face detection on the **re-used, module-level** FaceAnalysis
+208: @app.post("/detect-face")
+209: async def detect_face(
+296: # FaceAnalysis returns Face objects whose attributes are:
+326: def validate_size(bbox):
+684: @app.post("/api/v1/vision/recognize-frame", response_model=RecognizeFrameResponse)
+685: def recognize_frame(payload: RecognizeFrameRequest):
+778: @app.post("/enrollment/save-image")
+779: async def save_enrollment_image(
+897: @app.post("/enrollment/generate-embeddings")
+898: async def generate_enrollment_embeddings(req: Optional[EmbeddingRequest] = None):
+1034: # Run the full FaceAnalysis (detection + recognition) on the image.
+1045: # Use the highest-confidence face (FaceAnalysis sorts by det_score).
+1228: @app.post("/enrollment/normalize-embeddings")
+1229: async def normalize_enrollment_embeddings(req: Optional[EmbeddingRequest] = None):
+1386: # Run the full FaceAnalysis (detection + recognition) on the image.
+1690: def _compute_cosine_similarity_np(vec_a: np.ndarray, vec_b: np.ndarray) -> float:
+1704: @app.post("/enrollment/detect-outliers")
+1705: async def detect_enrollment_outliers(req: Optional[EmbeddingRequest] = None):
+2009: @app.post("/enrollment/generate-master-embedding")
+2010: async def generate_master_embedding(req: Optional[EmbeddingRequest] = None):
+2370: @app.post("/enrollment/save-to-database")
+2371: async def save_to_database(req: Phase6CRequest):
+2615: def _verify_generate_raw_embeddings(
+2709: def _verify_normalize_embeddings(raw_embeddings: list) -> tuple:
+2783: def _verify_detect_outliers(normalized_embeddings: list) -> tuple:
+2839: def _verify_generate_master_embedding(
+2881: def _print_verification_report(
+3060: @app.post("/enrollment/verify")
+3061: async def verify_enrollment_pipeline(req: Optional[EmbeddingRequest] = None):
+3271: @app.post("/attendance/generate-live-embedding")
+3272: async def generate_live_embedding(
+3282: def fail_response(reason):
+3499: @app.post("/attendance/load-enrolled-embeddings")
+3500: async def load_enrolled_embeddings(req: Optional[LoadEmbeddingsRequest] = None):
+3510: def fail_response(reason):
+3729: @app.get("/attendance/verify-embedding-cache")
+3730: async def verify_embedding_cache():
+3815: @app.post("/attendance/recognize-live")
+3816: async def recognize_live(
+3824: def fail_response(phase, reason):
+4094: @app.post("/attendance/validate")
+4095: async def validate_attendance_phase_9a(req: Phase9AValidationRequest):
+4302: @app.post("/attendance/save")
+4303: async def save_attendance_phase_9b(req: Phase9BSaveRequest):
+4500: @app.post("/attendance/complete")
+4501: async def complete_attendance_phase_9c(req: Phase9CCompletionRequest):
+4548: @app.post("/attendance/unknown-face-10a")
+4549: async def detect_unknown_face_phase_10a(req: Phase10AUnknownRequest):
+4611: @app.post("/attendance/track-unknown-10b")
+4612: async def track_unknown_face_phase_10b(req: Phase10BTrackingRequest):
+4732: @app.post("/attendance/confirm-unknown-10c")
+4733: async def confirm_unknown_face_phase_10c(req: Phase10CConfirmationRequest):
+4811: @app.post("/attendance/log-unknown-10d")
+4812: async def log_unknown_visitor_phase_10d(req: Phase10DLogRequest):
+4991: @app.post("/attendance/alert-engine-10e")
+4992: async def evaluate_security_alert_phase_10e(req: Phase10EAlertRequest):
+5139: @app.post("/attendance/liveness-10f")
+5140: async def evaluate_liveness_phase_10f(req: Phase10FLivenessRequest):
