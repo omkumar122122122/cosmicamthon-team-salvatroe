@@ -65,3 +65,11 @@ c
 scr
 first
 scratch/
+.neon
+backend/migrate_status.txt
+backend/seed_result.txt
+backend/gen_users.js
+backend/setup_demo_users.py
+backend/test-prisma.ts
+backend/query_users.sql
+ai_microservice/verify_*.py
