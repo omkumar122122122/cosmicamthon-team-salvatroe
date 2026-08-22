@@ -1,0 +1,56 @@
+# Dependencies
+**/node_modules/
+node_modules/
+backend/node_modules/
+/.pnpm-store
+
+# Production & Build outputs
+**/dist/
+**/build/
+**/out/
+dist/
+backend/dist/
+
+# Environment and secrets
+**/.env
+**/.env.*
+.env
+.env.local
+backend/.env
+
+# Logs
+**/*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Python & Virtual Environments
+**/.venv/
+**/venv/
+**/ENV/
+**/env/
+**/__pycache__/
+**/*.py[cod]
+*$py.class
+ai_microservice/__pycache__/
+
+# Uploads & Runtime files
+**/uploads/
+uploads/
+backend/uploads/
+ai_microservice/enrollment_images/
+ai_microservice/test_*
+ai
+
+# Editor & IDE directories
+**/.vscode/
+**/.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# OS generated files
+**/.DS_Store
+**/Thumbs.db
