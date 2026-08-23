@@ -39,8 +39,9 @@ import DonorRequests from "../pages/DonorRequests.jsx";
 import MyDonations from "../pages/MyDonations.jsx";
 import OrphanageDonationRequests from "../pages/OrphanageDonationRequests.jsx";
 import NearbyOrphanages from "../pages/NearbyOrphanages.jsx";
-import RFIDVerification from "../pages/RFIDVerification.jsx";
-import RFIDCardDetails from "../pages/RFIDCardDetails.jsx";
+import Gate from "../pages/Gate.jsx";
+import GateStaffDetails from "../pages/GateStaffDetails.jsx";
+import StaffAccessPortal from "../pages/StaffAccessPortal.jsx";
 import ProtectedRoute from "./ProtectedRoute.jsx";
 
 export default function AppRoutes() {
@@ -50,9 +51,15 @@ export default function AppRoutes() {
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<Login />} />
 
-      {/* ── RFID Staff Verification Terminal & Details ─────── */}
-      <Route path="/rfid" element={<RFIDVerification />} />
-      <Route path="/rfid/:rfidId" element={<RFIDCardDetails />} />
+      {/* ── Separate Public Staff Access Portal ─────────── */}
+      <Route path="/staff" element={<StaffAccessPortal />} />
+      <Route path="/staff/:staffId" element={<StaffAccessPortal />} />
+
+      {/* ── Public / Shared Live Gate Access (Direct URL & Shareable links) ── */}
+      <Route path="/orphanage" element={<OrphanageLayout />}>
+        <Route path="gate" element={<Gate />} />
+        <Route path="gate/staff/:staffId" element={<GateStaffDetails />} />
+      </Route>
 
       {/* ── Donor Auth Public Routes ─────────────────────── */}
       <Route path="/donor/login" element={<DonorLogin />} />
@@ -100,6 +107,8 @@ export default function AppRoutes() {
       <Route element={<ProtectedRoute allowedRoles={["orphanage"]} />}>
         <Route path="/orphanage" element={<OrphanageLayout />}>
           <Route index element={<OrphanageDashboard />} />
+          <Route path="gate" element={<Gate />} />
+          <Route path="gate/staff/:staffId" element={<GateStaffDetails />} />
           <Route path="ai-attendance" element={<AIAttendance />} />
           <Route path="visit-requests" element={<ManageVisitRequests />} />
           <Route path="children" element={<Children />} />

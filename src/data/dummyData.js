@@ -385,6 +385,7 @@ export const parentNav = [
 
 export const orphanageNav = [
   { label: "Dashboard",          path: "/orphanage",                    icon: FiActivity },
+  { label: "Gate",               path: "/orphanage/gate",               icon: FiShield },
   { label: "AI Attendance",      path: "/orphanage/ai-attendance",      icon: FiCamera },
   { label: "Visit Requests",     path: "/orphanage/visit-requests",     icon: FiCalendar },
   { label: "Donations",           path: "/orphanage/donation-requests",  icon: FiPackage },

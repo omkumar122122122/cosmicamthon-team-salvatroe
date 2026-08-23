@@ -64,7 +64,7 @@ function NavItem({ item, collapsed }) {
 function SidebarContent({ navItems, roleLabel, user, collapsed, onToggle, onLogout }) {
   // Group nav items logically
   const groupedNav = {
-    MANAGEMENT: navItems.filter(i => ['Dashboard', 'Children', 'Orphanages', 'Parents', 'Adoptions', 'AI Verifications', 'Visits & Attendance', 'Documents'].includes(i.label)),
+    MANAGEMENT: navItems.filter(i => ['Dashboard', 'Gate', 'Children', 'Orphanages', 'Parents', 'Adoptions', 'AI Verifications', 'Visits & Attendance', 'Documents'].includes(i.label)),
     MONITORING: navItems.filter(i => ['Alerts', 'Reports', 'Audit Logs', 'Health Monitoring', 'AI Attendance', 'Follow-up Sessions'].includes(i.label)),
     SYSTEM: navItems.filter(i => ['Settings', 'Profile', 'Staff Management'].includes(i.label)),
   };
