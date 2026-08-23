@@ -4,6 +4,7 @@ import {
   Post,
   Param,
   Body,
+  Query,
   UseGuards,
   Request,
   HttpCode,
@@ -21,6 +22,7 @@ import { ReportsExportService } from './reports-export.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
+import { Public } from '../common/decorators/public.decorator';
 import { Role } from '../common/enums/role.enum';
 import {
   DashboardStatsDto,
@@ -42,6 +44,28 @@ export class ReportsController {
     private readonly reportsService: ReportsService,
     private readonly reportsExportService: ReportsExportService,
   ) {}
+
+  @Get('management-analytics')
+  @Public()
+  @ApiOperation({
+    summary: 'Get Comprehensive Management Analytics',
+    description: 'Retrieve population, visit trends, gate movements, overstay stats, and population demographics.',
+  })
+  async getManagementAnalytics(@Query('period') period?: string): Promise<any> {
+    return this.reportsService.getManagementAnalytics(period || '30d');
+  }
+
+  @Get('export-csv')
+  @Public()
+  @ApiOperation({
+    summary: 'Export Data in CSV format',
+  })
+  async exportCsvReport(@Query('type') type?: string): Promise<any> {
+    return {
+      csv: await this.reportsService.exportCsvReport(type || 'visits'),
+      type: type || 'visits',
+    };
+  }
 
   @Get('dashboard-stats')
   @Roles(Role.ADMIN, Role.ORPHANAGE)

@@ -42,34 +42,58 @@ import NearbyOrphanages from "../pages/NearbyOrphanages.jsx";
 import Gate from "../pages/Gate.jsx";
 import GateStaffDetails from "../pages/GateStaffDetails.jsx";
 import StaffAccessPortal from "../pages/StaffAccessPortal.jsx";
+import ParentVisitPortal from "../pages/ParentVisitPortal.jsx";
+import AccessAudit from "../pages/AccessAudit.jsx";
+import Analytics from "../pages/Analytics.jsx";
 import NfcVisitDetails from "../pages/NfcVisitDetails.jsx";
 import ProtectedRoute from "./ProtectedRoute.jsx";
 
 export default function AppRoutes() {
+  // Smart root redirect depending on standalone portal port
+  const isParentPort = typeof window !== "undefined" && window.location.port === "5175";
+  const isStaffPort = typeof window !== "undefined" && window.location.port === "5174";
+  const defaultRedirect = isParentPort ? "/visit" : isStaffPort ? "/staff" : "/login";
+
   return (
     <Routes>
-      {/* Default → login */}
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      {/* Dynamic default redirect */}
+      <Route path="/" element={<Navigate to={defaultRedirect} replace />} />
       <Route path="/login" element={<Login />} />
 
-      {/* ── Separate Public Staff Access Portal ─────────── */}
+      {/* ── Separate Public Staff Access Portal (Port 5174) ─────────── */}
       <Route path="/staff" element={<StaffAccessPortal />} />
       <Route path="/staff/:staffId" element={<StaffAccessPortal />} />
 
-      {/* ── Public / Shared Live Gate Access (Direct URL & Shareable links) ── */}
+      {/* ── Separate Public Parent Visit Portal (Port 5175) ─────────── */}
+      <Route path="/visit" element={<ParentVisitPortal />} />
+      <Route path="/visit/:identifier" element={<ParentVisitPortal />} />
+      <Route path="/visit/*" element={<ParentVisitPortal />} />
+      <Route path="/parent-portal" element={<ParentVisitPortal />} />
+      <Route path="/parent-portal/:identifier" element={<ParentVisitPortal />} />
+      <Route path="/parent-portal/*" element={<ParentVisitPortal />} />
+
+      {/* ── Public / Shared Live Gate Access, Access Audit, Analytics & AI Welfare ──── */}
       <Route path="/orphanage/gate" element={<Gate />} />
       <Route path="/orphanage/gate/staff/:staffId" element={<GateStaffDetails />} />
+      <Route path="/access-audit" element={<AccessAudit />} />
+      <Route path="/orphanage/access-audit" element={<AccessAudit />} />
+      <Route path="/analytics" element={<Analytics />} />
+      <Route path="/orphanage/analytics" element={<Analytics />} />
+      <Route path="/ai-welfare" element={<PostAdoptionMonitoring />} />
+      <Route path="/post-adoption-monitoring" element={<PostAdoptionMonitoring />} />
+      <Route path="/orphanage/ai-welfare" element={<PostAdoptionMonitoring />} />
+      <Route path="/orphanage/post-adoption-monitoring" element={<PostAdoptionMonitoring />} />
 
       {/* ── Public NFC Visit Verification & Parent Details Routes ──────── */}
-      <Route path="/nfc" element={<NfcVisitDetails />} />
-      <Route path="/nfc/scan" element={<NfcVisitDetails />} />
-      <Route path="/nfc/scan/:nfcId" element={<NfcVisitDetails />} />
-      <Route path="/nfc/scan/*" element={<NfcVisitDetails />} />
-      <Route path="/nfc/visit/:token" element={<NfcVisitDetails />} />
-      <Route path="/nfc/parent/:nfcId" element={<NfcVisitDetails />} />
-      <Route path="/nfc/parent/*" element={<NfcVisitDetails />} />
-      <Route path="/nfc/:nfcId" element={<NfcVisitDetails />} />
-      <Route path="/nfc/*" element={<NfcVisitDetails />} />
+      <Route path="/nfc" element={<ParentVisitPortal />} />
+      <Route path="/nfc/scan" element={<ParentVisitPortal />} />
+      <Route path="/nfc/scan/:nfcId" element={<ParentVisitPortal />} />
+      <Route path="/nfc/scan/*" element={<ParentVisitPortal />} />
+      <Route path="/nfc/visit/:token" element={<ParentVisitPortal />} />
+      <Route path="/nfc/parent/:nfcId" element={<ParentVisitPortal />} />
+      <Route path="/nfc/parent/*" element={<ParentVisitPortal />} />
+      <Route path="/nfc/:nfcId" element={<ParentVisitPortal />} />
+      <Route path="/nfc/*" element={<ParentVisitPortal />} />
 
       {/* ── Donor Auth Public Routes ─────────────────────── */}
       <Route path="/donor/login" element={<DonorLogin />} />
@@ -131,6 +155,8 @@ export default function AppRoutes() {
           <Route path="staff" element={<StaffManagement />} />
           <Route path="staff/:staffId" element={<StaffProfile />} />
           <Route path="reports" element={<Reports />} />
+          <Route path="access-audit" element={<AccessAudit />} />
+          <Route path="analytics" element={<Analytics />} />
           <Route path="profile" element={<Profile />} />
           <Route path="donation-requests" element={<OrphanageDonationRequests />} />
         </Route>

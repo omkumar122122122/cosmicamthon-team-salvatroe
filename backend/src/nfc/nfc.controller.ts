@@ -100,6 +100,71 @@ export class NfcController {
   }
 
   /**
+   * Gate Control Center live summary, currently inside visitors, and statistics
+   * GET /api/v1/nfc/summary
+   */
+  @Get('summary')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get Gate Control Center summary, inside counts, and live stream',
+  })
+  async getGateSummary(): Promise<any> {
+    return this.nfcService.getGateSummary();
+  }
+
+  /**
+   * Active smart security and visit alerts (Late arrival, Overstay, Denials)
+   * GET /api/v1/nfc/alerts
+   */
+  @Get('alerts')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get active smart security alerts and visit anomalies',
+  })
+  async getAlerts(): Promise<any> {
+    return this.nfcService.getAlerts();
+  }
+
+  /**
+   * Child-specific visit history and protection audit records
+   * GET /api/v1/nfc/child-history/:childId
+   */
+  @Get('child-history/:childId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get child-specific visit history records',
+  })
+  async getChildVisitHistory(@Param('childId') childId: string): Promise<any> {
+    return this.nfcService.getChildVisitHistory(childId);
+  }
+
+  /**
+   * Parent-specific visit history and compliance records
+   * GET /api/v1/nfc/parent-history/:parentId
+   */
+  @Get('parent-history/:parentId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get parent-specific visit history records',
+  })
+  async getParentVisitHistory(@Param('parentId') parentId: string): Promise<any> {
+    return this.nfcService.getParentVisitHistory(parentId);
+  }
+
+  /**
+   * Access Audit table with filters, search, and pagination
+   * GET /api/v1/nfc/audit
+   */
+  @Get('audit')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get paginated Access Audit log events',
+  })
+  async getAccessAudit(@Body() query: any): Promise<any> {
+    return this.nfcService.getAccessAudit(query || {});
+  }
+
+  /**
    * NFC Gate Verification Endpoint
    * Used by Orphanage Staff at gate scanner to verify a tap and check-in visitor.
    */

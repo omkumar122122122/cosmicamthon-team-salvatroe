@@ -34,16 +34,20 @@ async function bootstrap() {
   // CORS Configuration
   app.enableCors({
     origin: (origin, callback) => {
-      const allowed = configService.get<string>('CORS_ORIGINS', 'http://localhost:5173').split(',');
-      // Allow requests with no origin (e.g. mobile apps, curl) or matching local/configured origins
+      const allowed = configService
+        .get<string>('CORS_ORIGINS', 'http://localhost:5173,http://localhost:5174,http://localhost:5175')
+        .split(',')
+        .map((s) => s.trim());
+      // Allow requests with no origin (e.g. mobile apps, curl) or matching local/configured origins/trycloudflare
       if (
         !origin ||
         allowed.includes(origin) ||
-        /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
+        /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) ||
+        /\.trycloudflare\.com$/.test(origin)
       ) {
         callback(null, true);
       } else {
-        callback(null, true); // Allow during dev
+        callback(null, true); // Allow for demo/multi-device testing
       }
     },
     credentials: true,

@@ -17,6 +17,7 @@ import {
   FiLoader,
 } from 'react-icons/fi';
 import { nfcService } from '../services/nfcService';
+import { QRCodeSVG } from 'qrcode.react';
 import { classNames } from '../utils/formatters';
 
 export default function NfcVisitDetails() {
@@ -212,8 +213,8 @@ export default function NfcVisitDetails() {
                 <p className="font-extrabold text-slate-900 dark:text-white mt-0.5">{passData.parent?.name || 'Verified Parent'}</p>
               </div>
               <div>
-                <p className="text-[11px] text-slate-400 font-semibold">Address</p>
-                <p className="font-bold text-slate-700 dark:text-slate-300 mt-0.5 truncate">{passData.parent?.address || 'Verified on Record'}</p>
+                <p className="text-[11px] text-slate-400 font-semibold">Identity Status</p>
+                <p className="font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">✓ KYC Verified on Record</p>
               </div>
             </div>
           </div>
@@ -281,6 +282,26 @@ export default function NfcVisitDetails() {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Scannable Gate QR Code Card */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-800/60">
+            <div>
+              <p className="text-xs font-extrabold text-slate-900 dark:text-white font-display">
+                Gate Entry QR Pass
+              </p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                Present this QR code to the scanner camera at the Orphanage Gate checkpoint.
+              </p>
+            </div>
+            <div className="shrink-0 rounded-xl bg-white p-2 shadow-sm">
+              <QRCodeSVG
+                value={typeof window !== 'undefined' ? window.location.href : (passData.nfcId || '')}
+                size={84}
+                level="H"
+                includeMargin={false}
+              />
+            </div>
           </div>
 
           {/* Security stamp & verification details */}

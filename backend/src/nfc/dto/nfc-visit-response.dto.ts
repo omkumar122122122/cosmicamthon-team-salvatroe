@@ -76,11 +76,29 @@ export class NfcVisitResponseDto {
   @ApiProperty({ description: 'Visit Request Status' })
   visitStatus: string;
 
+  @ApiPropertyOptional({ description: 'Current movement status (NOT_CHECKED_IN, CHECKED_IN, CHECKED_OUT)' })
+  movementStatus?: string;
+
   @ApiProperty({ description: 'Scheduled Visit Date' })
   visitDate: Date;
 
   @ApiProperty({ description: 'Scheduled Visit Time Slot' })
   visitTime: string;
+
+  @ApiPropertyOptional({ description: 'Actual gate check-in timestamp' })
+  checkInTime?: Date;
+
+  @ApiPropertyOptional({ description: 'Actual gate departure timestamp' })
+  checkOutTime?: Date;
+
+  @ApiPropertyOptional({ description: 'Total visit duration in minutes' })
+  durationMinutes?: number;
+
+  @ApiPropertyOptional({ description: 'Gate checkpoint name' })
+  gateName?: string;
+
+  @ApiPropertyOptional({ description: 'Rejection reason if rejected' })
+  rejectionReason?: string;
 
   @ApiPropertyOptional({ description: 'Designated Meeting Room' })
   meetingRoom?: string;

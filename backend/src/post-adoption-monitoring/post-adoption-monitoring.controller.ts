@@ -13,6 +13,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
+import { Public } from '../common/decorators/public.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Role } from '../common/enums/role.enum';
 
@@ -98,5 +99,46 @@ export class PostAdoptionMonitoringController {
   @ApiResponse({ status: 200, description: 'Report retrieved successfully' })
   getReport(@Param('id') id: string) {
     return this.monitoringService.getReport(id);
+  }
+
+  /**
+   * Phase 10: Executive AI Welfare Monitoring Dashboard KPI summary
+   */
+  @Get('dashboard-summary')
+  @Public()
+  @ApiOperation({ summary: 'Get AI Welfare Monitoring dashboard summary and health' })
+  getDashboardSummary() {
+    return this.monitoringService.getDashboardSummary();
+  }
+
+  /**
+   * Phase 10: AI Review Queue for Human Decision Support
+   */
+  @Get('review-queue')
+  @Public()
+  @ApiOperation({ summary: 'Get AI assessment review queue' })
+  getReviewQueue(@Query('status') status?: string) {
+    return this.monitoringService.getReviewQueue(status);
+  }
+
+  /**
+   * Phase 10: Submit Human Review Decision
+   */
+  @Post('human-review')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Submit human reviewer decision and follow-up plan' })
+  submitHumanReview(@Body() dto: { assessmentId: string; decision: string; notes?: string; followUpDate?: string; reviewerName?: string }) {
+    return this.monitoringService.submitHumanReview(dto);
+  }
+
+  /**
+   * Phase 10: Child Welfare AI Progression Timeline
+   */
+  @Get('child-timeline/:childId')
+  @Public()
+  @ApiOperation({ summary: 'Get post-adoption AI welfare timeline for a specific child' })
+  getChildTimeline(@Param('childId') childId: string) {
+    return this.monitoringService.getChildTimeline(childId);
   }
 }
