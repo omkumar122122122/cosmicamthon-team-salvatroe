@@ -37,6 +37,8 @@ import DonorRegister from "../pages/DonorRegister.jsx";
 import DonorDashboard from "../pages/DonorDashboard.jsx";
 import DonorRequests from "../pages/DonorRequests.jsx";
 import MyDonations from "../pages/MyDonations.jsx";
+import OrphanageDonationRequests from "../pages/OrphanageDonationRequests.jsx";
+import NearbyOrphanages from "../pages/NearbyOrphanages.jsx";
 import Gate from "../pages/Gate.jsx";
 import GateStaffDetails from "../pages/GateStaffDetails.jsx";
 import StaffAccessPortal from "../pages/StaffAccessPortal.jsx";
