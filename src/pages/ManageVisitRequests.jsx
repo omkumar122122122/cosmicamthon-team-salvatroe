@@ -17,7 +17,8 @@ import {
   FiShield,
   FiSlash,
   FiStar,
-  FiX
+  FiX,
+  FiZap
 } from "react-icons/fi";
 import Breadcrumb from "../components/Breadcrumb";
 import { PageSkeleton } from "../components/Loader";
@@ -29,6 +30,7 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../hooks/useToast";
 import ToastContainer from "../components/Toast";
 import { visitRequestsService } from "../services/visitRequestsService";
+import NfcGateVerifierModal from "../components/NFC/NfcGateVerifierModal";
 
 // Notification configuration (static UI elements)
 const notifications = [
@@ -450,6 +452,7 @@ export default function ManageVisitRequests() {
     addressProof: false,
     note: "Please submit the marked documents before the next slot can be confirmed."
   });
+  const [showNfcVerifier, setShowNfcVerifier] = useState(false);
 
   useEffect(() => {
     loadRequests();
@@ -802,12 +805,19 @@ export default function ManageVisitRequests() {
                 workflow designed for a modern child safety dashboard.
               </p>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="flex flex-wrap gap-2.5 items-center">
+              <Button
+                icon={FiZap}
+                onClick={() => setShowNfcVerifier(true)}
+                className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20"
+              >
+                NFC Gate Verifier
+              </Button>
               <Button icon={FiDownload} variant="secondary" className="rounded-full">
                 Export Report
               </Button>
-              <Button icon={FiRefreshCw} className="rounded-full">
-                Sync Live Queue
+              <Button icon={FiRefreshCw} onClick={loadRequests} className="rounded-full">
+                Sync Queue
               </Button>
             </div>
           </div>
@@ -1570,6 +1580,16 @@ export default function ManageVisitRequests() {
           </ActionButton>
         </div>
       </ModalShell>
+
+      {/* NFC Gate Verifier Modal */}
+      <NfcGateVerifierModal
+        isOpen={showNfcVerifier}
+        onClose={() => setShowNfcVerifier(false)}
+        onVerificationSuccess={() => {
+          loadRequests();
+          loadTodayVisits();
+        }}
+      />
     </div>
   );
 }

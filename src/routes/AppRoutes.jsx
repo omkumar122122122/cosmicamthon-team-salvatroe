@@ -37,11 +37,10 @@ import DonorRegister from "../pages/DonorRegister.jsx";
 import DonorDashboard from "../pages/DonorDashboard.jsx";
 import DonorRequests from "../pages/DonorRequests.jsx";
 import MyDonations from "../pages/MyDonations.jsx";
-import OrphanageDonationRequests from "../pages/OrphanageDonationRequests.jsx";
-import NearbyOrphanages from "../pages/NearbyOrphanages.jsx";
 import Gate from "../pages/Gate.jsx";
 import GateStaffDetails from "../pages/GateStaffDetails.jsx";
 import StaffAccessPortal from "../pages/StaffAccessPortal.jsx";
+import NfcVisitDetails from "../pages/NfcVisitDetails.jsx";
 import ProtectedRoute from "./ProtectedRoute.jsx";
 
 export default function AppRoutes() {
@@ -56,10 +55,19 @@ export default function AppRoutes() {
       <Route path="/staff/:staffId" element={<StaffAccessPortal />} />
 
       {/* ── Public / Shared Live Gate Access (Direct URL & Shareable links) ── */}
-      <Route path="/orphanage" element={<OrphanageLayout />}>
-        <Route path="gate" element={<Gate />} />
-        <Route path="gate/staff/:staffId" element={<GateStaffDetails />} />
-      </Route>
+      <Route path="/orphanage/gate" element={<Gate />} />
+      <Route path="/orphanage/gate/staff/:staffId" element={<GateStaffDetails />} />
+
+      {/* ── Public NFC Visit Verification & Parent Details Routes ──────── */}
+      <Route path="/nfc" element={<NfcVisitDetails />} />
+      <Route path="/nfc/scan" element={<NfcVisitDetails />} />
+      <Route path="/nfc/scan/:nfcId" element={<NfcVisitDetails />} />
+      <Route path="/nfc/scan/*" element={<NfcVisitDetails />} />
+      <Route path="/nfc/visit/:token" element={<NfcVisitDetails />} />
+      <Route path="/nfc/parent/:nfcId" element={<NfcVisitDetails />} />
+      <Route path="/nfc/parent/*" element={<NfcVisitDetails />} />
+      <Route path="/nfc/:nfcId" element={<NfcVisitDetails />} />
+      <Route path="/nfc/*" element={<NfcVisitDetails />} />
 
       {/* ── Donor Auth Public Routes ─────────────────────── */}
       <Route path="/donor/login" element={<DonorLogin />} />

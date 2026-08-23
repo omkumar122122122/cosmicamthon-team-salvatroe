@@ -142,6 +142,29 @@ export class EmailService {
   }
 
   // ─────────────────────────────────────────────
+  // NFC Visit Pass Notification
+  // ─────────────────────────────────────────────
+
+  async sendNfcVisitPassEmail(params: {
+    to: string;
+    parentName: string;
+    orphanageName: string;
+    visitDate: string;
+    visitTime: string;
+    nfcId: string;
+    nfcUrl: string;
+    meetingRoom?: string;
+    assignedStaff?: string;
+    instructions?: string;
+  }): Promise<void> {
+    await this.sendMail({
+      to: params.to,
+      subject: `Visit Request Accepted — Your NFC Digital Pass [${params.nfcId}]`,
+      html: this.nfcVisitPassTemplate(params),
+    });
+  }
+
+  // ─────────────────────────────────────────────
   // HTML Templates
   // ─────────────────────────────────────────────
 
@@ -280,6 +303,92 @@ export class EmailService {
     `);
   }
 
+  private nfcVisitPassTemplate(params: {
+    parentName: string;
+    orphanageName: string;
+    visitDate: string;
+    visitTime: string;
+    nfcId: string;
+    nfcUrl: string;
+    meetingRoom?: string;
+    assignedStaff?: string;
+    instructions?: string;
+  }): string {
+    return this.baseTemplate(`
+      <div style="text-align: center; margin-bottom: 24px;">
+        <span style="background: #e0e7ff; color: #3730a3; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
+          NFC Digital Visit Pass Issued
+        </span>
+        <h2 style="color: #0f172a; font-size: 22px; font-weight: 800; margin: 16px 0 8px;">
+          Visit Request Accepted! 🎉
+        </h2>
+        <p style="color: #475569; font-size: 14px; margin: 0;">
+          Hi <strong>${params.parentName}</strong>, your visit request to <strong>${params.orphanageName}</strong> has been officially approved.
+        </p>
+      </div>
+
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+        <table width="100%" cellpadding="6" cellspacing="0" style="font-size: 14px; color: #334155;">
+          <tr>
+            <td style="color: #64748b; font-weight: 600; width: 40%;">Scheduled Date:</td>
+            <td style="font-weight: 700; color: #0f172a;">${params.visitDate}</td>
+          </tr>
+          <tr>
+            <td style="color: #64748b; font-weight: 600;">Time Slot:</td>
+            <td style="font-weight: 700; color: #0f172a;">${params.visitTime}</td>
+          </tr>
+          <tr>
+            <td style="color: #64748b; font-weight: 600;">Meeting Room:</td>
+            <td style="font-weight: 600; color: #0f172a;">${params.meetingRoom || 'Assigned upon arrival'}</td>
+          </tr>
+          <tr>
+            <td style="color: #64748b; font-weight: 600;">Staff Supervisor:</td>
+            <td style="font-weight: 600; color: #0f172a;">${params.assignedStaff || 'Care Staff'}</td>
+          </tr>
+          <tr>
+            <td style="color: #64748b; font-weight: 600;">NFC Pass ID:</td>
+            <td>
+              <span style="font-family: monospace; font-size: 15px; font-weight: 800; color: #1a56db; background: #eff6ff; padding: 3px 8px; border-radius: 6px; border: 1px solid #bfdbfe;">
+                ${params.nfcId}
+              </span>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <div style="background: #eff6ff; border: 1px dashed #3b82f6; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 24px;">
+        <h3 style="color: #1e40af; font-size: 15px; font-weight: 700; margin: 0 0 8px;">
+          📲 NFC Pass & Entry QR Code
+        </h3>
+        <p style="color: #1e3a8a; font-size: 13px; line-height: 1.5; margin: 0 0 16px;">
+          Present this QR code or tap your device at the orphanage security gate for instant check-in.
+        </p>
+
+        <!-- Embedded QR Code for Gmail & Email Clients -->
+        <div style="margin-bottom: 16px;">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(params.nfcUrl)}" alt="Visit QR Pass" style="width: 150px; height: 150px; border-radius: 10px; border: 2px solid #bfdbfe; padding: 8px; background: #ffffff; display: inline-block;" />
+          <p style="font-family: monospace; font-size: 12px; font-weight: 700; color: #1e40af; margin-top: 6px;">${params.nfcId}</p>
+        </div>
+
+        <a href="${params.nfcUrl}" style="background: #2563eb; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 700; font-size: 14px; display: inline-block; box-shadow: 0 2px 4px rgba(37,99,235,0.2);">
+          Open NFC Digital Pass 📲
+        </a>
+      </div>
+
+      ${
+        params.instructions
+          ? `<div style="margin-bottom: 20px; padding: 12px 16px; background: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 4px; font-size: 13px; color: #92400e;">
+              <strong>Special Instructions:</strong> ${params.instructions}
+             </div>`
+          : ''
+      }
+
+      <p style="color: #64748b; font-size: 12px; line-height: 1.5; margin: 0;">
+        You can also access this pass anytime directly from your <strong>Parent Dashboard &rarr; Visit Requests &rarr; NFC Pass</strong>. Please bring a government-issued photo ID for security clearance.
+      </p>
+    `);
+  }
+
   private welcomeTemplate(params: { firstName: string }): string {
     return this.baseTemplate(`
       <h2 style="color:#1a202c;margin:0 0 16px;">Welcome, ${params.firstName}! 🎉</h2>
@@ -298,3 +407,4 @@ export class EmailService {
     `);
   }
 }
+

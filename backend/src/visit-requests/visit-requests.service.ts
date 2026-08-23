@@ -5,9 +5,12 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { EmailService } from '../auth/services/email.service';
 import { Role } from '../common/enums/role.enum';
+import * as crypto from 'crypto';
 import { Prisma, VisitRequestStatus, RiskLevel, NotificationType, OrphanageStatus } from '@prisma/client';
 import {
   CreateVisitRequestDto,
@@ -36,6 +39,8 @@ export class VisitRequestsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
+    private readonly emailService: EmailService,
+    private readonly configService: ConfigService,
   ) {}
 
   async create(
@@ -541,33 +546,69 @@ export class VisitRequestsService {
       qrStatus = 'Generated';
     }
 
-    // Update visit request
-    await this.prisma.visitRequest.update({
-      where: { id },
-      data: {
-        status: VisitRequestStatus.APPROVED,
-        visitDate: this.parseDateOnly(targetDate),
-        visitTime: targetTime,
-        visitorsCount: dto.visitorLimit ?? visitRequest.visitorsCount,
-        expectedArrivalTime: targetTime,
-        meetingRoom: dto.meetingRoom,
-        assignedStaff: dto.assignedStaff,
-        instructions: dto.instructions,
-        qrCode,
-        qrStatus,
-        approvalNotes: dto.approvalNotes,
-        reviewedById: requestUserId,
-        reviewedAt: new Date(),
-        parentNotified: dto.notifyParent || false,
-        notifiedAt: dto.notifyParent ? new Date() : null,
-      },
+    // Check for existing NFC pass (Duplicate Protection)
+    let nfcRecord = await this.prisma.nfcVisit.findUnique({
+      where: { visitRequestId: id },
     });
 
-    // Send notification to parent
+    let nfcId = nfcRecord?.nfcId;
+    let secureToken = nfcRecord?.secureToken;
+    const isNewNfc = !nfcRecord;
+
+    if (isNewNfc) {
+      const randomHex = crypto.randomBytes(3).toString('hex').toUpperCase();
+      nfcId = `NFC-VST-${randomHex}`;
+      secureToken = crypto.randomBytes(32).toString('hex');
+    }
+
+    // Atomic update of visit request status + NFC pass creation
+    await this.prisma.$transaction(async (tx) => {
+      await tx.visitRequest.update({
+        where: { id },
+        data: {
+          status: VisitRequestStatus.APPROVED,
+          visitDate: this.parseDateOnly(targetDate),
+          visitTime: targetTime,
+          visitorsCount: dto.visitorLimit ?? visitRequest.visitorsCount,
+          expectedArrivalTime: targetTime,
+          meetingRoom: dto.meetingRoom,
+          assignedStaff: dto.assignedStaff,
+          instructions: dto.instructions,
+          qrCode,
+          qrStatus,
+          approvalNotes: dto.approvalNotes,
+          reviewedById: requestUserId,
+          reviewedAt: new Date(),
+          parentNotified: dto.notifyParent || false,
+          notifiedAt: dto.notifyParent ? new Date() : null,
+        },
+      });
+
+      if (isNewNfc && nfcId && secureToken) {
+        nfcRecord = await tx.nfcVisit.create({
+          data: {
+            nfcId,
+            secureToken,
+            visitRequestId: id,
+            isActive: true,
+          },
+        });
+      }
+    });
+
+    this.logger.log(
+      `Visit request ${id} approved by user ${requestUserId}. NFC Pass: ${nfcId}`,
+    );
+
+    // Send in-app notification & NFC Email to parent (Non-blocking)
     try {
       const parent = await this.prisma.parent.findUnique({
         where: { id: visitRequest.parentId },
-        select: { userId: true },
+        include: {
+          user: {
+            select: { id: true, email: true, firstName: true, lastName: true },
+          },
+        },
       });
 
       const orphanage = await this.prisma.orphanage.findUnique({
@@ -576,20 +617,59 @@ export class VisitRequestsService {
       });
 
       if (parent && orphanage) {
+        // 1. In-app notification
         await this.notificationsService.sendNotification(
           parent.userId,
           NotificationType.VISIT_REQUEST_UPDATE,
-          'Visit Request Approved',
-          `Your visit request for ${orphanage.name} has been approved for ${new Date(dto.visitDate).toLocaleDateString()}.`,
+          'Visit Request Approved & NFC Pass Ready',
+          `Your visit to ${orphanage.name} has been approved for ${new Date(targetDate).toLocaleDateString()}. Your NFC Pass ID is ${nfcId}.`,
           {
             relatedEntityType: 'VisitRequest',
             relatedEntityId: id,
           },
         );
+
+        // 2. Email delivery with NFC digital pass link
+        if (parent.user?.email && nfcRecord) {
+          const frontendUrl =
+            this.configService.get<string>('FRONTEND_URL') ||
+            this.configService.get<string>('app.frontendUrl') ||
+            'http://localhost:5173';
+
+          const nfcUrl = `${frontendUrl.replace(/\/$/, '')}/nfc/visit/${nfcRecord.secureToken}`;
+          const parentFullName =
+            `${parent.user.firstName || ''} ${parent.user.lastName || ''}`.trim() || 'Parent';
+
+          const formattedDate = new Date(targetDate).toLocaleDateString('en-US', {
+            weekday: 'short',
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+          });
+
+          await this.emailService.sendNfcVisitPassEmail({
+            to: parent.user.email,
+            parentName: parentFullName,
+            orphanageName: orphanage.name,
+            visitDate: formattedDate,
+            visitTime: targetTime,
+            nfcId: nfcRecord.nfcId,
+            nfcUrl,
+            meetingRoom: dto.meetingRoom,
+            assignedStaff: dto.assignedStaff,
+            instructions: dto.instructions,
+          });
+
+          this.logger.log(
+            `NFC Pass notification email dispatched to ${parent.user.email} for visit request ${id}`,
+          );
+        }
       }
-    } catch (error) {
-      this.logger.error(`Failed to send notification for approved visit request ${id}:`, error);
-      // Don't fail the entire operation if notification fails
+    } catch (notifError) {
+      this.logger.warn(
+        `Non-blocking: Failed to dispatch notification or email for visit ${id}:`,
+        notifError,
+      );
     }
 
     this.logger.log(

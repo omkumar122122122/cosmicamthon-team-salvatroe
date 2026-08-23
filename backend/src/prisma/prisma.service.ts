@@ -39,6 +39,7 @@ export class PrismaService
               msg.includes('administrator command') ||
               msg.includes('server closed the connection unexpectedly') ||
               msg.includes('Connection reset by peer') ||
+              msg.includes('Timed out fetching a new connection') ||
               error?.code === 'P1001' ||
               error?.code === 'P1017' ||
               error?.code === 'P2024';

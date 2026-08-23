@@ -1169,6 +1169,7 @@ model VisitRequest {
   reviewedBy             User?              @relation("VisitRequestReviewedBy", fields: [reviewedById], references: [id])
   visitSupervisor        User?              @relation("VisitRequestSupervisor", fields: [visitSupervisorId], references: [id])
   welfareSessions        WelfareSession[]
+  nfcVisit               NfcVisit?
 
   @@index([parentId])
   @@index([orphanageId])
@@ -1182,6 +1183,41 @@ model VisitRequest {
   @@index([orphanageId, visitDate])
   @@index([parentId, status])
   @@map("visit_requests")
+}
+
+model NfcVisit {
+  id             String       @id @default(uuid())
+  nfcId          String       @unique
+  secureToken    String       @unique
+  visitRequestId String       @unique
+  isActive       Boolean      @default(true)
+  scanCount      Int          @default(0)
+  lastScannedAt  DateTime?
+  lastScannedBy  String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  visitRequest   VisitRequest @relation(fields: [visitRequestId], references: [id], onDelete: Cascade)
+  scans          NfcScan[]
+
+  @@index([nfcId])
+  @@index([secureToken])
+  @@index([visitRequestId])
+  @@map("nfc_visits")
+}
+
+model NfcScan {
+  id          String   @id @default(uuid())
+  nfcVisitId  String
+  scannedAt   DateTime @default(now())
+  scannedBy   String?
+  result      String   @default("SUCCESS")
+  notes       String?
+  createdAt   DateTime @default(now())
+  nfcVisit    NfcVisit @relation(fields: [nfcVisitId], references: [id], onDelete: Cascade)
+
+  @@index([nfcVisitId])
+  @@index([scannedAt])
+  @@map("nfc_scans")
 }
 
 model WelfareSession {

@@ -26,6 +26,7 @@ import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { SecurityHeadersMiddleware } from './common/middleware/security-headers.middleware';
 
 import { AdminModule } from './admin/admin.module';
+import { NfcModule } from './nfc/nfc.module';
 
 import appConfig from './config/app.config';
 import jwtConfig from './config/jwt.config';
@@ -87,6 +88,7 @@ import emailConfig from './config/email.config';
     SettingsModule,
     DonorsModule,
     DonationRequestsModule,
+    NfcModule,
   ],
   providers: [
     // Apply throttle guard globally

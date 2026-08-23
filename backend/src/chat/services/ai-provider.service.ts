@@ -23,6 +23,11 @@ export class AIProviderService {
   private readonly model: string;
   private readonly temperature: number;
   private readonly maxTokens: number;
+  private readonly fallbackModels = [
+    "Qwen/Qwen2.5-72B-Instruct",
+    "meta-llama/Llama-3.3-70B-Instruct",
+    "Qwen/Qwen2.5-Coder-32B-Instruct",
+  ];
 
   constructor(private readonly configService: ConfigService) {
     const apiKey =
@@ -31,7 +36,7 @@ export class AIProviderService {
     this.client = apiKey ? new InferenceClient(apiKey) : null;
     this.model = this.configService.get<string>(
       "HF_MODEL",
-      "Qwen/Qwen2.5-7B-Instruct",
+      "Qwen/Qwen2.5-72B-Instruct",
     );
     this.temperature = parseFloat(
       this.configService.get<string>("AI_TEMPERATURE", "0.7"),
@@ -70,69 +75,95 @@ export class AIProviderService {
       );
     }
 
-    try {
-      // Build context string from retrieved data
-      const contextBlock = buildContextString(context);
+    // Build candidate model list starting with configured model
+    const candidateModels = Array.from(
+      new Set([this.model, ...this.fallbackModels]),
+    );
 
-      // Combine system prompt + context
-      let systemInstruction = SYSTEM_PROMPT;
-      if (contextBlock) {
-        systemInstruction += "\n\n" + contextBlock;
-      }
+    // Build context string from retrieved data
+    const contextBlock = buildContextString(context);
 
-      // Convert history to HF Chat Completion format (system / user / assistant roles)
-      const messages: Array<{
-        role: "system" | "user" | "assistant";
-        content: string;
-      }> = [
-        { role: "system", content: systemInstruction },
-        ...conversation.map((turn) => ({
-          role: (turn.role === "assistant" || turn.role === "model"
-            ? "assistant"
-            : "user") as "assistant" | "user",
-          content: turn.content,
-        })),
-        { role: "user", content: userMessage },
-      ];
-
-      // Call Hugging Face Inference API
-      const response = await this.client.chatCompletion({
-        model: this.model,
-        messages,
-        temperature: this.temperature,
-        max_tokens: this.maxTokens,
-      });
-
-      const reply = response.choices?.[0]?.message?.content?.trim();
-
-      if (!reply) {
-        throw new InternalServerErrorException(
-          "Hugging Face returned an empty response.",
-        );
-      }
-
-      this.logger.debug(`AI reply generated: ${reply.length} chars`);
-      return reply;
-    } catch (error: any) {
-      const statusCode = error?.httpResponse?.status ?? error?.status ?? error?.response?.status;
-      const responseBody = error?.httpResponse?.body ?? error?.response?.data ?? error?.body;
-      const hfErrorMessage = responseBody?.error?.message || error?.message || 'Unknown Hugging Face error';
-
-      this.logger.error("========== HUGGING FACE ERROR ==========");
-      this.logger.error(`Status Code: ${statusCode || 'N/A'}`);
-      this.logger.error(`Error Message: ${hfErrorMessage}`);
-      this.logger.error(`Response Body: ${JSON.stringify(responseBody || {})}`);
-      this.logger.error("=========================================");
-
-      if (this.isQuotaError(error)) {
-        throw new HttpException(
-          'Sahayak AI rate limit or quota is currently exhausted for the configured Hugging Face API key. Please wait and retry.',
-          HttpStatus.TOO_MANY_REQUESTS,
-        );
-      }
-
-      throw new InternalServerErrorException(`Hugging Face API Error [${statusCode || 500}]: ${hfErrorMessage}`);
+    // Combine system prompt + context
+    let systemInstruction = SYSTEM_PROMPT;
+    if (contextBlock) {
+      systemInstruction += "\n\n" + contextBlock;
     }
+
+    // Convert history to HF Chat Completion format (system / user / assistant roles)
+    const messages: Array<{
+      role: "system" | "user" | "assistant";
+      content: string;
+    }> = [
+      { role: "system", content: systemInstruction },
+      ...conversation.map((turn) => ({
+        role: (turn.role === "assistant" || turn.role === "model"
+          ? "assistant"
+          : "user") as "assistant" | "user",
+        content: turn.content,
+      })),
+      { role: "user", content: userMessage },
+    ];
+
+    let lastError: any = null;
+
+    for (const targetModel of candidateModels) {
+      try {
+        this.logger.debug(`Attempting generation with model: ${targetModel}`);
+        const response = await this.client.chatCompletion({
+          model: targetModel,
+          messages,
+          temperature: this.temperature,
+          max_tokens: this.maxTokens,
+        });
+
+        const reply = response.choices?.[0]?.message?.content?.trim();
+
+        if (reply) {
+          this.logger.debug(
+            `AI reply generated successfully using ${targetModel}: ${reply.length} chars`,
+          );
+          return reply;
+        }
+      } catch (error: any) {
+        lastError = error;
+        const statusCode =
+          error?.httpResponse?.status ?? error?.status ?? error?.response?.status;
+        const responseBody =
+          error?.httpResponse?.body ?? error?.response?.data ?? error?.body;
+        const hfErrorMessage =
+          responseBody?.error?.message ||
+          error?.message ||
+          "Unknown Hugging Face error";
+
+        this.logger.warn(
+          `Model '${targetModel}' failed [${statusCode || "N/A"}]: ${hfErrorMessage}. Trying fallback if available...`,
+        );
+
+        if (this.isQuotaError(error)) {
+          throw new HttpException(
+            "Sahayak AI rate limit or quota is currently exhausted for the configured Hugging Face API key. Please wait and retry.",
+            HttpStatus.TOO_MANY_REQUESTS,
+          );
+        }
+      }
+    }
+
+    const statusCode =
+      lastError?.httpResponse?.status ?? lastError?.status ?? lastError?.response?.status;
+    const responseBody =
+      lastError?.httpResponse?.body ?? lastError?.response?.data ?? lastError?.body;
+    const hfErrorMessage =
+      responseBody?.error?.message || lastError?.message || "Unknown Hugging Face error";
+
+    this.logger.error("========== HUGGING FACE ERROR ==========");
+    this.logger.error(`Status Code: ${statusCode || "N/A"}`);
+    this.logger.error(`Error Message: ${hfErrorMessage}`);
+    this.logger.error(`Response Body: ${JSON.stringify(responseBody || {})}`);
+    this.logger.error("=========================================");
+
+    throw new InternalServerErrorException(
+      `Hugging Face API Error [${statusCode || 500}]: ${hfErrorMessage}`,
+    );
   }
 
   private isQuotaError(error: any): boolean {
