@@ -33,8 +33,10 @@ export class PrismaService
               error?.message?.includes('Closed') ||
               error?.message?.includes('kind: Closed') ||
               error?.message?.includes('Connection closed') ||
+              error?.message?.includes('Timed out fetching a new connection') ||
               error?.code === 'P1001' ||
-              error?.code === 'P1017';
+              error?.code === 'P1017' ||
+              error?.code === 'P2024';
 
             if (isClosed && retries > 0) {
               this.logger.warn(

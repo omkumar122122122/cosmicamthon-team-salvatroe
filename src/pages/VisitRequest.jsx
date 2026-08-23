@@ -41,6 +41,8 @@ import ToastContainer from "../components/Toast";
 import { parentsService } from "../services/parentsService";
 import { orphanagesService } from "../services/orphanagesService";
 import { visitRequestsService } from "../services/visitRequestsService";
+import NfcPassCard from "../components/NFC/NfcPassCard";
+import NfcScannerModal from "../components/NFC/NfcScannerModal";
 
 // Mock available children for visit selection
 const MOCK_CHILDREN = [
@@ -1571,6 +1573,7 @@ function PreviousVisitsSection({
   const [selectedReqForDetails, setSelectedReqForDetails] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [nfcScannerModal, setNfcScannerModal] = useState({ open: false, pass: null });
 
   const statusToneMap = {
     PENDING: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300 border-amber-300",
@@ -1633,16 +1636,27 @@ function PreviousVisitsSection({
           </p>
         </div>
 
-        {/* Search Input */}
-        <div className="relative min-w-[240px]">
-          <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by ID, Purpose, Orphanage..."
-            className="w-full rounded-xl border border-slate-200 bg-slate-50/80 pl-9 pr-4 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
-          />
+        {/* Search & NFC Quick Action */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setNfcScannerModal({ open: true, pass: null })}
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-xs font-extrabold text-white shadow-md shadow-blue-500/20 transition hover:from-blue-500 hover:to-indigo-500"
+          >
+            <FiZap className="h-4 w-4 text-amber-300 animate-pulse" />
+            NFC Scanner
+          </button>
+
+          {/* Search Input */}
+          <div className="relative min-w-[240px]">
+            <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by ID, Purpose, Orphanage..."
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/80 pl-9 pr-4 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+            />
+          </div>
         </div>
       </div>
 
@@ -1703,6 +1717,18 @@ function PreviousVisitsSection({
                     </p>
                   </div>
 
+                  {/* Active NFC Digital Pass Component (Only for Approved Requests) */}
+                  {statusKey === "APPROVED" && (
+                    <div className="pt-2">
+                      <NfcPassCard
+                        visitRequest={req}
+                        onOpenScanner={(vr, pass) =>
+                          setNfcScannerModal({ open: true, pass: pass || vr })
+                        }
+                      />
+                    </div>
+                  )}
+
                   {req.rejectionReason && (
                     <div className="rounded-xl border border-rose-200 bg-rose-50/80 p-2.5 text-xs text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/40 dark:text-rose-200">
                       <p className="font-bold">Rejection Reason:</p>
@@ -1736,10 +1762,12 @@ function PreviousVisitsSection({
                       </div>
                     </div>
                   ) : (
-                    <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800 flex justify-between text-xs font-bold text-slate-600 dark:text-slate-300">
-                      <span>Visit Date: {new Date(req.visitDate).toLocaleDateString()}</span>
-                      <span>Time: {req.visitTime || "Morning"}</span>
-                    </div>
+                    statusKey !== "APPROVED" && (
+                      <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800 flex justify-between text-xs font-bold text-slate-600 dark:text-slate-300">
+                        <span>Visit Date: {new Date(req.visitDate).toLocaleDateString()}</span>
+                        <span>Time: {req.visitTime || "Morning"}</span>
+                      </div>
+                    )
                   )}
                 </div>
 
@@ -1768,6 +1796,13 @@ function PreviousVisitsSection({
           })}
         </div>
       )}
+
+      {/* Global NFC Scanner Modal */}
+      <NfcScannerModal
+        isOpen={nfcScannerModal.open}
+        onClose={() => setNfcScannerModal({ open: false, pass: null })}
+        selectedPass={nfcScannerModal.pass}
+      />
 
       {/* Reject Reschedule Modal */}
       {selectedReqForReject && (

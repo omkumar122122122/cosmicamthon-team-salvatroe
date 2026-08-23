@@ -39,6 +39,7 @@ import DonorRequests from "../pages/DonorRequests.jsx";
 import MyDonations from "../pages/MyDonations.jsx";
 import OrphanageDonationRequests from "../pages/OrphanageDonationRequests.jsx";
 import NearbyOrphanages from "../pages/NearbyOrphanages.jsx";
+import NfcVisitDetails from "../pages/NfcVisitDetails.jsx";
 import ProtectedRoute from "./ProtectedRoute.jsx";
 
 export default function AppRoutes() {
@@ -47,6 +48,18 @@ export default function AppRoutes() {
       {/* Default → login */}
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<Login />} />
+
+      {/* ── Public NFC Visit Verification & Parent Details Routes ──────── */}
+      <Route path="/nfc" element={<NfcVisitDetails />} />
+      <Route path="/nfc/scan" element={<NfcVisitDetails />} />
+      <Route path="/nfc/scan/:nfcId" element={<NfcVisitDetails />} />
+      <Route path="/nfc/scan/*" element={<NfcVisitDetails />} />
+      <Route path="/nfc/visit/:token" element={<NfcVisitDetails />} />
+      <Route path="/nfc/parent/:nfcId" element={<NfcVisitDetails />} />
+      <Route path="/nfc/parent/*" element={<NfcVisitDetails />} />
+      <Route path="/nfc/:nfcId" element={<NfcVisitDetails />} />
+      <Route path="/nfc/*" element={<NfcVisitDetails />} />
+      <Route path="/staff/:staffId" element={<StaffProfile />} />
 
       {/* ── Donor Auth Public Routes ─────────────────────── */}
       <Route path="/donor/login" element={<DonorLogin />} />
